@@ -2,24 +2,20 @@
 
 namespace OAuth2\Grant\Implicit\Adapter;
 
-use OAuth2\Grant\Implicit\Parameter\RedirectUriInterface;
-use OAuth2\Grant\Implicit\Parameter\ResponseTypeInterface;
-use OAuth2\Grant\Implicit\Parameter\ClientIdInterface;
-
 interface AdapterInterface
 {
     /**
-     * @return string|ClientIdInterface
+     * @return string
      */
     public function getClientId();
 
     /**
-     * @return string|RedirectUriInterface
+     * @return string
      */
     public function getRedirectUri();
 
     /**
-     * @return string|ResponseTypeInterface
+     * @return string
      */
     public function getResponseType();
 }

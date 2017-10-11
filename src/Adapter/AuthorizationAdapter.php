@@ -2,9 +2,6 @@
 
 namespace OAuth2\Grant\Implicit\Adapter;
 
-use OAuth2\Grant\Implicit\Parameter\ClientIdInterface;
-use OAuth2\Grant\Implicit\Parameter\RedirectUriInterface;
-use OAuth2\Grant\Implicit\Parameter\ResponseTypeInterface;
 use PHPUnit\Runner\Exception;
 use Psr\Http\Message\ServerRequestInterface;
 use Traversable;
@@ -16,17 +13,17 @@ class AuthorizationAdapter implements AdapterInterface
     const RESPONSE_TYPE_KEY = 'response_type';
 
     /**
-     * @var ClientIdInterface|null
+     * @var string|null
      */
     protected $clientId;
 
     /**
-     * @var RedirectUriInterface|null
+     * @var string|null
      */
     protected $redirectUri;
 
     /**
-     * @var ResponseTypeInterface|null
+     * @var string|null
      */
     protected $responseType;
 
@@ -49,9 +46,9 @@ class AuthorizationAdapter implements AdapterInterface
     }
 
     /**
-     * @param null|ClientIdInterface $clientId
+     * @param string $clientId
      */
-    public function setClientId($clientId)
+    public function setClientId(string $clientId)
     {
         $this->clientId = $clientId;
     }
@@ -65,9 +62,9 @@ class AuthorizationAdapter implements AdapterInterface
     }
 
     /**
-     * @param null|RedirectUriInterface $redirectUri
+     * @param string $redirectUri
      */
-    public function setRedirectUri($redirectUri)
+    public function setRedirectUri(string $redirectUri)
     {
         $this->redirectUri = $redirectUri;
     }
@@ -81,9 +78,9 @@ class AuthorizationAdapter implements AdapterInterface
     }
 
     /**
-     * @param null|ResponseTypeInterface $responseType
+     * @param string $responseType
      */
-    public function setResponseType($responseType)
+    public function setResponseType(string $responseType)
     {
         $this->responseType = $responseType;
     }
