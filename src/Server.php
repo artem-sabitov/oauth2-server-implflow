@@ -2,27 +2,23 @@
 
 namespace OAuth2\Grant\Implicit;
 
-use AccessTokenStorageInterface;
-use ClientStorageInterface;
 use OAuth2\Grant\Implicit\Adapter\AdapterInterface;
 use OAuth2\Grant\Implicit\Adapter\AuthorizationAdapter;
 use OAuth2\Grant\Implicit\Factory\AuthorizationAdapterFactory;
 use OAuth2\Grant\Implicit\Provider\IdentityProviderInterface;
+use OAuth2\Grant\Implicit\Storage\AccessTokenStorageInterface;
+use OAuth2\Grant\Implicit\Storage\ClientStorageInterface;
 use OAuth2\Grant\Implicit\Token\AccessTokenFactory;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Zend\Diactoros\ServerRequestFactory;
 
-class Server implements GrantManagerInterface
+class Server implements ServerInterface
 {
     /**
      * @var IdentityProviderInterface
      */
     protected $identityProvider;
-
-    /**
-     * @var AdapterInterface|null
-     */
-    protected $adapter = null;
 
     /**
      * @var ClientStorageInterface|null
@@ -33,6 +29,11 @@ class Server implements GrantManagerInterface
      * @var AccessTokenStorageInterface|null
      */
     protected $tokenStorage = null;
+
+    /**
+     * @var AdapterInterface|null
+     */
+    protected $authorizationAdapter = null;
 
     /**
      * @var ServerRequestInterface|null
@@ -74,7 +75,7 @@ class Server implements GrantManagerInterface
         }
 
         if ($adapter !== null) {
-            $this->setAdapter($adapter);
+            $this->setAuthorizationAdapter($adapter);
         }
 
         $this->messages = new Messages();
@@ -82,15 +83,15 @@ class Server implements GrantManagerInterface
 
     /**
      * @param ServerRequestInterface|null $request
-     * @return GrantResultInterface
+     * @return ResponseInterface
      */
-    public function authorize(ServerRequestInterface $request = null): GrantResultInterface
+    public function authorize(ServerRequestInterface $request = null): ResponseInterface
     {
         if ($request !== null) {
             $this->setServerRequest($request);
         }
 
-        $adapter = $this->getAdapter();
+        $adapter = $this->getAuthorizationAdapter();
 
         if ($adapter->getResponseType() !== $this->responseType) {
             $this->getMessages()->addErrorMessage(sprintf(
@@ -98,6 +99,8 @@ class Server implements GrantManagerInterface
                 AuthorizationAdapter::RESPONSE_TYPE_KEY, $adapter->getResponseType()
             ));
         }
+
+        var_dump(123); die;
 
         /** @var ClientInterface $client */
         $client = $this
@@ -132,13 +135,17 @@ class Server implements GrantManagerInterface
         );
         $this->getTokenStorage()->write($accessToken);
 
-        return createAuthorizationResult();
+        return $this->createAuthorizationResult();
     }
 
-    public function createAuthorizationResult()
+    /**
+     * @return Result
+     */
+    public function createAuthorizationResult(): Result
     {
         $result = new Result();
 
+        return $result;
     }
 
     /**
@@ -160,21 +167,21 @@ class Server implements GrantManagerInterface
     /**
      * @return null|AdapterInterface
      */
-    public function getAdapter()
+    public function getAuthorizationAdapter()
     {
-        if ($this->adapter === null) {
-            $this->adapter = AuthorizationAdapterFactory::fromServerRequest($this->getServerRequest());
+        if ($this->authorizationAdapter === null) {
+            $this->authorizationAdapter = AuthorizationAdapterFactory::fromServerRequest($this->getServerRequest());
         }
 
-        return $this->adapter;
+        return $this->authorizationAdapter;
     }
 
     /**
-     * @param null|AdapterInterface $adapter
+     * @param null|AdapterInterface $authorizationAdapter
      */
-    public function setAdapter(AdapterInterface $adapter)
+    public function setAuthorizationAdapter(AdapterInterface $authorizationAdapter)
     {
-        $this->adapter = $adapter;
+        $this->authorizationAdapter = $authorizationAdapter;
     }
 
     /**

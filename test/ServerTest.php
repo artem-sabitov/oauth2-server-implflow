@@ -2,64 +2,72 @@
 
 namespace Oauth2Test\Grant\Implicit;
 
-use OAuth2\Grant\Implicit\Factory\ServerFactory;
+use OAuth2\Grant\Implicit\Storage\AccessTokenStorageInterface;
+use OAuth2\Grant\Implicit\Storage\ClientStorageInterface;
+use OAuth2\Grant\Implicit\Adapter\AdapterInterface;
+use OAuth2\Grant\Implicit\Provider\IdentityProviderInterface;
 use OAuth2\Grant\Implicit\Server;
+use OAuth2\Grant\Implicit\ServerInterface;
 use PHPUnit\Framework\TestCase;
-use PHPUnit_Framework_MockObject_MockObject;
-use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Zend\Diactoros\Request;
-use Zend\Diactoros\ServerRequest;
-use Zend\Diactoros\ServerRequestFactory;
-use Zend\Diactoros\Uri;
+use Zend\Diactoros\ServerRequest as Request;
 
 class ServerTest extends TestCase
 {
     /**
-     * @var ContainerInterface|PHPUnit_Framework_MockObject_MockObject
+     * @var IdentityProviderInterface
      */
-    protected $container;
+    private $identityProvider;
 
     /**
-     * @var ServerRequestInterface|PHPUnit_Framework_MockObject_MockObject
+     * @var ClientStorageInterface
      */
-    protected $request;
+    private $clientStorage;
+
+    /**
+     * @var AccessTokenStorageInterface
+     */
+    private $accessTokenStorage;
+
+    /**
+     * @var ServerRequestInterface
+     */
+    private $request;
+
+    /**
+     * @var ServerInterface|Server
+     */
+    private $server;
 
     protected function setUp()
     {
-        $this->container = $this->createMock(ContainerInterface::class);
-        $this->request = $this->createMock(ServerRequestInterface::class);
+        $this->identityProvider = $this->createMock(IdentityProviderInterface::class);
+        $this->clientStorage = $this->createMock(ClientStorageInterface::class);
+        $this->accessTokenStorage = $this->createMock(AccessTokenStorageInterface::class);
+        $this->request = new Request([], [], 'http://example.com/', 'GET', 'php://memory');
+
+        $this->server = new Server(
+            $this->identityProvider,
+            $this->clientStorage,
+            $this->accessTokenStorage,
+            $this->request
+        );
     }
 
-    /**
-     * @return ServerRequest
-     */
-    protected function createAuthorizationServerRequest()
+    public function testImplementsServerInterface()
     {
-        $serverRequest = (ServerRequestFactory::fromGlobals())
-            ->withUri(new Uri('http://server/oauth2/authorize'))
-            ->withQueryParams([
-                'client_id' => 'app',
-                'redirect_uri' => 'http://app',
-                'response_type' => 'token'
-            ]);
-
-        return $serverRequest;
+        $this->assertInstanceOf(ServerInterface::class, $this->server);
     }
 
-    public function testCreateServerFromFactory()
+    public function testAutoCreateServerRequestFromGlobal()
     {
-        $factory = new ServerFactory();
-        $server = $factory->__invoke($this->container);
-
-        $this->assertInstanceOf(Server::class, $server);
+        $this->assertInstanceOf(ServerRequestInterface::class, $this->server->getServerRequest());
     }
 
-    public function testServerAuthorizeMethodCanExecute()
+    public function testGetAdapterReturnAdapterInterface()
     {
-        $factory = new ServerFactory();
-        $server = $factory->__invoke($this->container);
-
-        $server->authorize($this->createAuthorizationServerRequest());
+        $this->assertInstanceOf(AdapterInterface::class, $this->server->getAuthorizationAdapter());
     }
+
+    public function test
 }
