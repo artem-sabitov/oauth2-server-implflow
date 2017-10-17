@@ -94,18 +94,20 @@ class Server implements ServerInterface
         $adapter = $this->getAuthorizationAdapter();
 
         if ($adapter->getResponseType() !== $this->responseType) {
-            $this->getMessages()->addErrorMessage(sprintf(
-                'The parameter %s `%s` not available to the Implicit Grant.',
+            $this->getMessages()->addErrorMessage(
+                ErrorResponse::UNSUPPORTED_RESPONSE_TYPE, sprintf(
+                'OAuth2 parameter `%s`: `%s` not available to the Implicit Grant.',
                 AuthorizationAdapter::RESPONSE_TYPE_KEY, $adapter->getResponseType()
             ));
         }
-
-        var_dump(123); die;
 
         /** @var ClientInterface $client */
         $client = $this
             ->getClientStorage()
             ->getClientById($adapter->getClientId());
+
+        var_dump($this->getMessages()->toArray());
+        var_dump(123); die;
 
         $isUriCorrect = false;
         $redirectUri = $adapter->getRedirectUri();

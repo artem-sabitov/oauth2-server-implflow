@@ -64,10 +64,13 @@ class ServerTest extends TestCase
         $this->assertInstanceOf(ServerRequestInterface::class, $this->server->getServerRequest());
     }
 
-    public function testGetAdapterReturnAdapterInterface()
+    public function testGetAuthorizationAdapterReturnAdapterInterface()
     {
         $this->assertInstanceOf(AdapterInterface::class, $this->server->getAuthorizationAdapter());
     }
 
-    public function test
+    public function testAuthorize()
+    {
+        $this->server->authorize();
+    }
 }

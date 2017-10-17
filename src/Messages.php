@@ -10,12 +10,21 @@ class Messages
     protected $messages;
 
     /**
+     * @return array
+     */
+    public function toArray(): array
+    {
+        return $this->messages;
+    }
+
+    /**
+     * @param string $key
      * @param string $message
      * @return Messages
      */
-    public function addErrorMessage(string $message): Messages
+    public function addErrorMessage(string $key, string $message): Messages
     {
-        $this->messages[] = $message;
+        $this->messages[$key] = $message;
 
         return $this;
     }
