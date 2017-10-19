@@ -1,6 +1,6 @@
 <?php
 
-namespace OAuth2Test;
+namespace OAuth2Test\Grant\Implicit;
 
 use OAuth2\Grant\Implicit\Storage\AccessTokenStorageInterface;
 use OAuth2\Grant\Implicit\Storage\ClientStorageInterface;
@@ -8,7 +8,7 @@ use OAuth2\Grant\Implicit\Adapter\AdapterInterface;
 use OAuth2\Grant\Implicit\Provider\IdentityProviderInterface;
 use OAuth2\Grant\Implicit\Server;
 use OAuth2\Grant\Implicit\ServerInterface;
-use OAuth2Test\Assets\TestClientStorage;
+use OAuth2Test\Grant\Implicit\Assets\TestClientStorage;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 use Zend\Diactoros\ServerRequest as Request;

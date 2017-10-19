@@ -31,7 +31,7 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "OAuth2Test\\": "test/"
+      "OAuth2Test\\Grant\\Implicit\\": "test/"
     }
   },
   "scripts": {

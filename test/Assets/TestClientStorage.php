@@ -1,6 +1,6 @@
 <?php
 
-namespace OAuth2Test\Assets;
+namespace OAuth2Test\Grant\Implicit\Assets;
 
 use OAuth2\Grant\Implicit\Client;
 use OAuth2\Grant\Implicit\ClientInterface;

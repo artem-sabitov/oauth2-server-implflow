@@ -86,22 +86,31 @@ class AuthorizationAdapter implements AdapterInterface
     }
 
     /**
-     * @param  array|Traversable $params
-     * @throws \InvalidArgumentException
+     * @param array $params
      * @return AuthorizationAdapter
      */
     protected function setParams($params)
     {
-        if (is_array($params) === false && $params instanceof Traversable === false) {
+
+        return $this;
+    }
+
+    /**
+     * @param  array|Traversable $params
+     * @throws \InvalidArgumentException
+     * @return AuthorizationAdapter
+     */
+    protected function validateParams($params)
+    {
+        if (is_array($params) === false) {
             throw new \InvalidArgumentException(
                 sprintf(
-                    'Parameter provided to %s must be an %s or %s',
-                    __METHOD__,
-                    'array',
-                    'Traversable'
+                    'Parameter provided to %s must be an array.',
+                    __METHOD__,'array'
                 )
             );
         }
+
 
         foreach ($params as $key => $value) {
             switch ($key) {
@@ -117,6 +126,6 @@ class AuthorizationAdapter implements AdapterInterface
             }
         }
 
-        return $this;
+
     }
 }
