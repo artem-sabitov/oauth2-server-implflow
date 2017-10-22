@@ -12,5 +12,5 @@ interface ClientInterface
     /**
      * @return array
      */
-    public function getListAvailableRedirectUri();
+    public function getListRedirectUri();
 }

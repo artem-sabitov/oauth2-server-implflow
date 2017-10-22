@@ -7,12 +7,12 @@ use OAuth2\Grant\Implicit\IdentityInterface;
 interface IdentityProviderInterface
 {
     /**
-     * @return IdentityInterface|null
+     * @return IdentityInterface
      */
-    public function getIdentity();
+    public function getIdentity(): IdentityInterface;
 
     /**
      * @return boolean
      */
-    public function hasIdentity();
+    public function hasIdentity(): bool;
 }

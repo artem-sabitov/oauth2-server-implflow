@@ -2,10 +2,6 @@
 
 namespace OAuth2\Grant\Implicit\Adapter;
 
-use PHPUnit\Runner\Exception;
-use Psr\Http\Message\ServerRequestInterface;
-use Traversable;
-
 class AuthorizationAdapter implements AdapterInterface
 {
     const CLIENT_ID_KEY = 'client_id';
@@ -89,29 +85,8 @@ class AuthorizationAdapter implements AdapterInterface
      * @param array $params
      * @return AuthorizationAdapter
      */
-    protected function setParams($params)
+    protected function setParams(array $params)
     {
-
-        return $this;
-    }
-
-    /**
-     * @param  array|Traversable $params
-     * @throws \InvalidArgumentException
-     * @return AuthorizationAdapter
-     */
-    protected function validateParams($params)
-    {
-        if (is_array($params) === false) {
-            throw new \InvalidArgumentException(
-                sprintf(
-                    'Parameter provided to %s must be an array.',
-                    __METHOD__,'array'
-                )
-            );
-        }
-
-
         foreach ($params as $key => $value) {
             switch ($key) {
                 case self::CLIENT_ID_KEY:
@@ -126,6 +101,6 @@ class AuthorizationAdapter implements AdapterInterface
             }
         }
 
-
+        return $this;
     }
 }

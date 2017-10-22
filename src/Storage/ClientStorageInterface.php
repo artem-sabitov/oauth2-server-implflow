@@ -7,7 +7,8 @@ use OAuth2\Grant\Implicit\ClientInterface;
 interface ClientStorageInterface
 {
     /**
-     * @return ClientInterface|null
+     * @return ClientInterface
+     * @throws \InvalidArgumentException
      */
     public function getClientById(string $clientId): ClientInterface;
 }

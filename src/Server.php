@@ -4,14 +4,20 @@ namespace OAuth2\Grant\Implicit;
 
 use OAuth2\Grant\Implicit\Adapter\AdapterInterface;
 use OAuth2\Grant\Implicit\Adapter\AuthorizationAdapter;
+use OAuth2\Grant\Implicit\Exception\AuthenticationRequiredException;
+use OAuth2\Grant\Implicit\Exception\InvalidParameterException;
+use OAuth2\Grant\Implicit\Exception\MissingParameterException;
 use OAuth2\Grant\Implicit\Factory\AuthorizationAdapterFactory;
 use OAuth2\Grant\Implicit\Provider\IdentityProviderInterface;
+use OAuth2\Grant\Implicit\Renderer\AuthenticationForm;
 use OAuth2\Grant\Implicit\Storage\AccessTokenStorageInterface;
 use OAuth2\Grant\Implicit\Storage\ClientStorageInterface;
 use OAuth2\Grant\Implicit\Token\AccessTokenFactory;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Zend\Diactoros\Response;
 use Zend\Diactoros\ServerRequestFactory;
+use Zend\Diactoros\Stream;
 
 class Server implements ServerInterface
 {
@@ -51,9 +57,9 @@ class Server implements ServerInterface
     protected $responseType = 'token';
 
     /**
-     * @var array
+     * @var
      */
-    protected $result = [];
+    protected $authenticationUri = '/login';
 
     /**
      * Server constructor.
@@ -91,63 +97,111 @@ class Server implements ServerInterface
             $this->setServerRequest($request);
         }
 
-        $adapter = $this->getAuthorizationAdapter();
-
-        if ($adapter->getResponseType() !== $this->responseType) {
-            $this->getMessages()->addErrorMessage(
-                ErrorResponse::UNSUPPORTED_RESPONSE_TYPE, sprintf(
-                'OAuth2 parameter `%s`: `%s` not available to the Implicit Grant.',
-                AuthorizationAdapter::RESPONSE_TYPE_KEY, $adapter->getResponseType()
-            ));
-        }
-
-        /** @var ClientInterface $client */
-        $client = $this
-            ->getClientStorage()
-            ->getClientById($adapter->getClientId());
-
-        var_dump($this->getMessages()->toArray());
-        var_dump(123); die;
-
-        $isUriCorrect = false;
-        $redirectUri = $adapter->getRedirectUri();
-        foreach ($client->getListAvailableRedirectUri() as $uri) {
-            if ($redirectUri === $uri) {
-                $isUriCorrect = true;
-            }
-        }
-
-        if ($isUriCorrect === false) {
-            $this->getMessages()->addErrorMessage(sprintf(
-                'The parameter %s `%s` not available to the %s: `%s`',
-                AuthorizationAdapter::REDIRECT_URI_KEY, $redirectUri,
-                AuthorizationAdapter::CLIENT_ID_KEY, $client->getClientId()
-            ));
-        }
-
         if ($this->getIdentityProvider()->hasIdentity() === false) {
-            $this->getMessages()->addErrorMessage(sprintf(
-                'The identity was not provided.'
-            ));
+            return new Response\RedirectResponse($this->authenticationUri);
         }
 
-        $accessToken = AccessTokenFactory::create(
-            $this->getIdentityProvider()->getIdentity(),
-            $client->getClientId()
-        );
-        $this->getTokenStorage()->write($accessToken);
+        try {
+            $accessToken = $this->createAccessToken();
+            var_dump($accessToken); die;
+        } catch (MissingParameterException|InvalidParameterException $e) {
+            return $this->createErrorResponse(400, $e->getMessage());
+        }
 
-        return $this->createAuthorizationResult();
+
     }
 
     /**
-     * @return Result
+     * @return Token\AccessToken
+     * @throws \InvalidArgumentException
      */
-    public function createAuthorizationResult(): Result
+    protected function createAccessToken()
     {
-        $result = new Result();
+        $client = $this->getClientFromStorage();
+        $identity = $this->getIdentityFromProvider();
 
-        return $result;
+        $accessToken = AccessTokenFactory::create(
+            $identity,
+            $client->getClientId()
+        );
+
+        return $accessToken;
+    }
+
+    /**
+     * @return ClientInterface
+     * @throws \InvalidArgumentException
+     */
+    protected function getClientFromStorage()
+    {
+        $clientId = $this->getAuthorizationAdapter()->getClientId();
+        if ($clientId === null) {
+            throw MissingParameterException::create(
+                AuthorizationAdapter::CLIENT_ID_KEY
+            );
+        }
+
+        /** @var ClientInterface $client */
+        $client = $this->getClientStorage()->getClientById($clientId);
+
+        return $client;
+    }
+
+    /**
+     * @return IdentityInterface
+     * @throws AuthenticationRequiredException
+     */
+    protected function getIdentityFromProvider()
+    {
+        if ($this->getIdentityProvider()->hasIdentity() === false) {
+            throw new AuthenticationRequiredException('Authentication failed');
+        }
+
+        return $this->getIdentityProvider()->getIdentity();
+    }
+
+    /**
+     * @return string
+     * @throws InvalidParameterException
+     */
+    protected function getRedirectUri()
+    {
+        $client = $this->getClientFromStorage();
+
+        $redirectUri = $this->getAuthorizationAdapter()->getRedirectUri();
+        if ($redirectUri === null) {
+            throw MissingParameterException::create(
+                AuthorizationAdapter::REDIRECT_URI_KEY
+            );
+        }
+
+        foreach ($client->getListRedirectUri() as $uri) {
+            if ($uri === $redirectUri) {
+                return $redirectUri;
+            }
+        }
+
+        throw InvalidParameterException::create(
+            AuthorizationAdapter::REDIRECT_URI_KEY, $redirectUri
+        );
+    }
+
+    /**
+     * @return ErrorResponse
+     */
+    protected function createErrorResponse(int $code, string $message): ResponseInterface
+    {
+        $body = [
+            'code' => $code,
+            'message' => $message,
+        ];
+
+        $response = new Response\JsonResponse($body);
+        $response
+            ->withHeader('ContentType', 'application/json')
+            ->withStatus($code);
+
+        return $response;
     }
 
     /**
