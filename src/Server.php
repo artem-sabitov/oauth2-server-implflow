@@ -12,12 +12,15 @@ use OAuth2\Grant\Implicit\Provider\IdentityProviderInterface;
 use OAuth2\Grant\Implicit\Renderer\AuthenticationForm;
 use OAuth2\Grant\Implicit\Storage\AccessTokenStorageInterface;
 use OAuth2\Grant\Implicit\Storage\ClientStorageInterface;
+use OAuth2\Grant\Implicit\Token\AccessToken;
 use OAuth2\Grant\Implicit\Token\AccessTokenFactory;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\UriInterface;
 use Zend\Diactoros\Response;
 use Zend\Diactoros\ServerRequestFactory;
 use Zend\Diactoros\Stream;
+use Zend\Diactoros\Uri;
 
 class Server implements ServerInterface
 {
@@ -103,12 +106,17 @@ class Server implements ServerInterface
 
         try {
             $accessToken = $this->createAccessToken();
-            var_dump($accessToken); die;
         } catch (MissingParameterException|InvalidParameterException $e) {
             return $this->createErrorResponse(400, $e->getMessage());
         }
 
+        $query = [
+            'access_token' => $accessToken->getAccessToken(),
+        ];
 
+        $redirectUri = $this->createSuccessRedirectUri($query);
+
+        return new Response\RedirectResponse($redirectUri);
     }
 
     /**
@@ -126,6 +134,15 @@ class Server implements ServerInterface
         );
 
         return $accessToken;
+    }
+
+    /**
+     * @param array $query
+     * @return UriInterface
+     */
+    protected function createSuccessRedirectUri(array $query): UriInterface
+    {
+        $uri = new Uri();
     }
 
     /**

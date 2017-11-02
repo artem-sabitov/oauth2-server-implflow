@@ -75,7 +75,12 @@ class ServerTest extends TestCase
 
     public function testAuthorizeReturnAccessToken()
     {
-        $this->request = new Request([], [], 'http://example.com/', 'GET', 'php://memory');
+        $this->request = new Request(
+            [], [],
+            'http://example.com/', 'GET', 'php://memory',
+            [], [], [
+                'client_id' => 'test',
+        ]);
 
         $this->server = new Server(
             $this->identityProvider,
@@ -85,7 +90,13 @@ class ServerTest extends TestCase
         );
 
         $response = $this->server->authorize();
+        $body = $response->getBody()->getContents();
+
         $this->assertInstanceOf(ResponseInterface::class, $response);
+        $this->assertArrayHasKey('location', $response->getHeaders());
+        $this->assertEquals('', $body);
+
+        var_dump($body); die;
     }
 
     public function testAuthorizeWithoutClientId()

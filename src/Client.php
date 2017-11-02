@@ -4,7 +4,7 @@ namespace OAuth2\Grant\Implicit;
 
 use InvalidArgumentException;
 
-class Client
+class Client implements ClientInterface
 {
     /**
      * @var string
@@ -44,5 +44,13 @@ class Client
     public function getAvailableRedirectUri(): array
     {
         return $this->redirectUriList;
+    }
+
+    /**
+     * @return array
+     */
+    public function getListRedirectUri()
+    {
+        // TODO: Implement getListRedirectUri() method.
     }
 }
