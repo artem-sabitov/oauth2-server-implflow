@@ -16,6 +16,11 @@ class Client implements ClientInterface
      */
     protected $redirectUriList = [];
 
+    /**
+     * Client constructor.
+     * @param string $identificator
+     * @param string|array $redirectUri
+     */
     public function __construct(string $identificator, $redirectUri)
     {
         if (is_string($redirectUri) === true) {
@@ -41,16 +46,8 @@ class Client implements ClientInterface
     /**
      * @return array
      */
-    public function getAvailableRedirectUri(): array
+    public function getListRedirectUri(): array
     {
         return $this->redirectUriList;
-    }
-
-    /**
-     * @return array
-     */
-    public function getListRedirectUri()
-    {
-        // TODO: Implement getListRedirectUri() method.
     }
 }

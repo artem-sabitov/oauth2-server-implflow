@@ -20,7 +20,7 @@ class TestClientStorage implements ClientStorageInterface
      */
     private $clientProperties = [
         'redirect_uri_list' => [
-            'https://test'
+            'http://example.com'
         ],
     ];
 

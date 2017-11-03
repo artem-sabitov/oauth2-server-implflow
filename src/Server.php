@@ -105,16 +105,17 @@ class Server implements ServerInterface
         }
 
         try {
+            $redirectUri = $this->getRedirectUri();
             $accessToken = $this->createAccessToken();
+
+            $query = [
+                'access_token' => $accessToken->getAccessToken(),
+            ];
         } catch (MissingParameterException|InvalidParameterException $e) {
             return $this->createErrorResponse(400, $e->getMessage());
         }
 
-        $query = [
-            'access_token' => $accessToken->getAccessToken(),
-        ];
-
-        $redirectUri = $this->createSuccessRedirectUri($query);
+        $redirectUri = $this->createSuccessRedirectUri($redirectUri, $query);
 
         return new Response\RedirectResponse($redirectUri);
     }
@@ -140,9 +141,12 @@ class Server implements ServerInterface
      * @param array $query
      * @return UriInterface
      */
-    protected function createSuccessRedirectUri(array $query): UriInterface
+    protected function createSuccessRedirectUri(string $uri, array $query): UriInterface
     {
-        $uri = new Uri();
+        $uri = new Uri($uri);
+        $uri = $uri->withQuery(http_build_query($query));
+
+        return $uri;
     }
 
     /**

@@ -15,6 +15,8 @@ use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Zend\Diactoros\ServerRequest as Request;
+use Zend\Diactoros\Uri;
+use Zend\Stdlib\Parameters;
 
 class ServerTest extends TestCase
 {
@@ -80,6 +82,7 @@ class ServerTest extends TestCase
             'http://example.com/', 'GET', 'php://memory',
             [], [], [
                 'client_id' => 'test',
+                'redirect_uri' => 'http://example.com',
         ]);
 
         $this->server = new Server(
@@ -90,13 +93,15 @@ class ServerTest extends TestCase
         );
 
         $response = $this->server->authorize();
-        $body = $response->getBody()->getContents();
-
         $this->assertInstanceOf(ResponseInterface::class, $response);
+
         $this->assertArrayHasKey('location', $response->getHeaders());
+
+        $body = $response->getBody()->getContents();
         $this->assertEquals('', $body);
 
-        var_dump($body); die;
+        $redirectUri = new Uri($response->getHeader('location')[0]);
+        $this->assertStringMatchesFormat('access_token=%s', $redirectUri->getQuery());
     }
 
     public function testAuthorizeWithoutClientId()
