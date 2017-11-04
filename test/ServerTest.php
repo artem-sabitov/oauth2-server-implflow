@@ -19,7 +19,6 @@ use Psr\Http\Message\ServerRequestInterface;
 use ReflectionProperty;
 use Zend\Diactoros\ServerRequest as Request;
 use Zend\Diactoros\Uri;
-use Zend\Stdlib\Parameters;
 
 class ServerTest extends TestCase
 {

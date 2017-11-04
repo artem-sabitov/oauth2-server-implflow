@@ -57,7 +57,7 @@ class Server implements ServerInterface
     /**
      * @var string
      */
-    protected $responseType = 'token';
+    protected $availableResponseType = 'token';
 
     /**
      * @var
