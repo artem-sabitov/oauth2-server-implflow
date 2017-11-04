@@ -19,7 +19,9 @@ class InvalidParameterException extends OutOfRangeException
     public static function create(string $parameterName, string $value)
     {
         return new self(sprintf(
-            self::$messageTemplate, $value, $parameterName
+            self::$messageTemplate,
+            $value,
+            $parameterName
         ));
     }
 }

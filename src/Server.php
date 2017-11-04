@@ -111,7 +111,7 @@ class Server implements ServerInterface
             $query = [
                 'access_token' => $accessToken->getAccessToken(),
             ];
-        } catch (MissingParameterException|InvalidParameterException $e) {
+        } catch (MissingParameterException | InvalidParameterException $e) {
             return $this->createErrorResponse(400, $e->getMessage());
         }
 
@@ -203,7 +203,8 @@ class Server implements ServerInterface
         }
 
         throw InvalidParameterException::create(
-            AuthorizationAdapter::REDIRECT_URI_KEY, $redirectUri
+            AuthorizationAdapter::REDIRECT_URI_KEY,
+            $redirectUri
         );
     }
 
@@ -316,7 +317,7 @@ class Server implements ServerInterface
     /**
      * @return Messages
      */
-    protected function getMessages()
+    public function getMessages()
     {
         return $this->messages;
     }
