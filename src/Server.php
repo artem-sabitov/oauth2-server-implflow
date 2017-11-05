@@ -2,7 +2,6 @@
 
 namespace OAuth2\Grant\Implicit;
 
-use OAuth2\Grant\Implicit\Adapter\AdapterInterface;
 use OAuth2\Grant\Implicit\Exception\AuthenticationException;
 use OAuth2\Grant\Implicit\Exception\ParameterException;
 use OAuth2\Grant\Implicit\Factory\AuthorizationRequestFactory;
@@ -10,7 +9,9 @@ use OAuth2\Grant\Implicit\Options\ServerOptions;
 use OAuth2\Grant\Implicit\Provider\ClientProviderInterface;
 use OAuth2\Grant\Implicit\Provider\IdentityProviderInterface;
 use OAuth2\Grant\Implicit\Storage\TokenStorageInterface;
+use OAuth2\Grant\Implicit\Token\AccessToken;
 use OAuth2\Grant\Implicit\Token\AccessTokenFactory;
+use OAuth2\Grant\Implicit\Validator\AuthorizationRequestValidator;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
@@ -71,7 +72,7 @@ class Server implements ServerInterface
      * @param ServerRequestInterface|null $request
      * @return ResponseInterface
      */
-    public function authorize(ServerRequestInterface $request = null): ResponseInterface
+    public function authorize(ServerRequestInterface $request): ResponseInterface
     {
         if ($this->isAuthenticated() === false) {
             return new Response\RedirectResponse(
@@ -79,23 +80,18 @@ class Server implements ServerInterface
             );
         }
 
-        if ($request !== null) {
-            try {
-                $this->authorizationRequest =
-                    AuthorizationRequestFactory::fromServerRequest($request);
-            } catch (ParameterException $e) {
-                return $this->createErrorResponse(400, $e->getMessage());
-            }
+        try {
+            $request = AuthorizationRequestFactory::fromServerRequest($request);
+            $this->validateAuthorizationRequest($request);
+            $this->authorizationRequest = $request;
+
+            $token = $this->createToken();
+            $this->getTokenStorage()->write($token);
+
+            $redirectUri = $this->createRedirectUriWithAccessToken($token);
+        } catch (ParameterException $e) {
+            return $this->createErrorResponse(400, $e->getMessage());
         }
-
-        $redirectUri = $this->getAuthorizationRequest()->getRedirectUri();
-        $this->validateRedirectUri($redirectUri);
-
-        $token = $this->createToken();
-        $this->getTokenStorage()->write($token);
-
-        $query = ['access_token' => $token->getAccessToken(),];
-        $redirectUri = $this->createSuccessRedirectUri($redirectUri, $query);
 
         return new Response\RedirectResponse($redirectUri);
     }
@@ -109,13 +105,23 @@ class Server implements ServerInterface
     }
 
     /**
+     * @param AuthorizationRequest $request
+     * @throw ParameterException
+     */
+    public function validateAuthorizationRequest(AuthorizationRequest $request): void
+    {
+        $validator = $this->getAuthorizationRequestValidator();
+        $validator->validate($this->getAuthorizationRequest());
+    }
+
+    /**
      * @return Token\AccessToken
      * @throws \InvalidArgumentException
      */
     protected function createToken()
     {
         $client = $this->getClientFromProvider();
-        $identity = $this->getIdentityFromProvider();
+        $identity = $this->getIdentityProvider()->getIdentity();
 
         $accessToken = AccessTokenFactory::create(
             $identity,
@@ -129,9 +135,11 @@ class Server implements ServerInterface
      * @param array $query
      * @return UriInterface
      */
-    protected function createSuccessRedirectUri(string $uri, array $query): UriInterface
+    public function createRedirectUriWithAccessToken(AccessToken $token): UriInterface
     {
-        $uri = new Uri($uri);
+        $query = ['access_token' => $token->getAccessToken()];
+
+        $uri = new Uri($this->getAuthorizationRequest()->getRedirectUri());
         $uri = $uri->withQuery(http_build_query($query));
 
         return $uri;
@@ -152,39 +160,9 @@ class Server implements ServerInterface
     }
 
     /**
-     * @return IdentityInterface
-     * @throws AuthenticationException
+     * @return Response\JsonResponse
      */
-    protected function getIdentityFromProvider()
-    {
-        if ($this->getIdentityProvider()->hasIdentity() === false) {
-            throw new AuthenticationException('Authentication failed');
-        }
-
-        return $this->getIdentityProvider()->getIdentity();
-    }
-
-    /**
-     * @return void
-     * @throws ParameterException
-     */
-    protected function validateRedirectUri(string $redirectUri): void
-    {
-        foreach ($this->getClientFromProvider()->getListRedirectUri() as $uri) {
-            if ($uri === $redirectUri) {
-                return;
-            }
-        }
-
-        throw ParameterException::createInvalidParameter(
-            AuthorizationRequest::REDIRECT_URI_KEY
-        );
-    }
-
-    /**
-     * @return ErrorResponse
-     */
-    protected function createErrorResponse(int $code, string $message): ResponseInterface
+    public function createErrorResponse(int $code, string $message): ResponseInterface
     {
         $body = [
             'code' => $code,
@@ -208,19 +186,15 @@ class Server implements ServerInterface
     }
 
     /**
+     * Method returning a new immutable object with new value.
      * @param IdentityProviderInterface $identityProvider
      */
     public function setIdentityProvider(IdentityProviderInterface $identityProvider)
     {
-        $this->identityProvider = $identityProvider;
-    }
+        $server = clone $this;
+        $server->identityProvider = $identityProvider;
 
-    /**
-     * @param null|AdapterInterface $authorizationAdapter
-     */
-    public function setAuthorizationAdapter(AdapterInterface $authorizationAdapter)
-    {
-        $this->authorizationAdapter = $authorizationAdapter;
+        return $server;
     }
 
     /**
@@ -287,6 +261,23 @@ class Server implements ServerInterface
         $server->authorizationRequest = $request;
 
         return $server;
+    }
+
+    /**
+     * @return AuthorizationRequestValidator
+     */
+    public function getAuthorizationRequestValidator()
+    {
+        $responseType = $this->options->getSupportedResponseType();
+        $clientId = $this->getAuthorizationRequest()->getClientId();
+        $clientRedirectUri = $this
+            ->getClientProvider()
+            ->getClientById($clientId)
+            ->getRedirectUri();
+
+        return new AuthorizationRequestValidator(
+            $responseType, $clientRedirectUri
+        );
     }
 
     /**

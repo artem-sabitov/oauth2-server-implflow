@@ -6,6 +6,8 @@ use Zend\Stdlib\AbstractOptions;
 
 class ServerOptions extends AbstractOptions
 {
+    const DEFAULT_RESPONSE_TYPE = 'token';
+
     /**
      * @var string
      */
@@ -14,7 +16,7 @@ class ServerOptions extends AbstractOptions
     /**
      * @var string
      */
-    protected $availableResponseType = 'token';
+    protected $supportedResponseType = self::DEFAULT_RESPONSE_TYPE;
 
     /**
      * @return string
@@ -38,18 +40,19 @@ class ServerOptions extends AbstractOptions
     /**
      * @return string
      */
-    public function getAvailableResponseType(): string
+    public function getSupportedResponseType(): string
     {
-        return $this->availableResponseType;
+        return $this->supportedResponseType;
     }
 
     /**
      * @param string $availableResponseType
      */
-    public function setAvailableResponseType(string $availableResponseType): ServerOptions
+    public function setSupportedResponseType(string $responseType): ServerOptions
     {
-        $this->availableResponseType = $availableResponseType;
+        $new = clone $this;
+        $new->supportedResponseType = $responseType;
 
-        return $this;
+        return $new;
     }
 }

@@ -7,7 +7,7 @@ class Messages
     /**
      * @var array
      */
-    protected $messages;
+    protected $messages = [];
 
     /**
      * @return array

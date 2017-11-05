@@ -2,14 +2,15 @@
 
 namespace OAuth2Test\Grant\Implicit\Assets;
 
+use InvalidArgumentException;
+use OAuth2\Grant\Implicit\AuthorizationRequest;
 use OAuth2\Grant\Implicit\Client;
 use OAuth2\Grant\Implicit\ClientInterface;
+use OAuth2\Grant\Implicit\Exception\ParameterException;
 use OAuth2\Grant\Implicit\Provider\ClientProviderInterface;
 
 class TestClientProvider implements ClientProviderInterface
 {
-    const TEST_CLIENT_ID = 'test';
-
     /**
      * @var null|array
      */
@@ -19,26 +20,29 @@ class TestClientProvider implements ClientProviderInterface
      * @var array
      */
     private $clientProperties = [
-        'redirect_uri_list' => [
-            'http://example.com'
-        ],
+        'identificator' => 'test',
+        'redirect_uri' => 'http://example.com',
     ];
 
     public function __construct()
     {
-        $this->clients[self::TEST_CLIENT_ID] = new Client(
-            self::TEST_CLIENT_ID,
-            $this->clientProperties['redirect_uri_list']
+        $clientId = $this->clientProperties['identificator'];
+        $this->clients[$clientId] = new Client(
+            $this->clientProperties['identificator'],
+            $this->clientProperties['redirect_uri']
         );
     }
 
     /**
      * @return ClientInterface|null
+     * @throws InvalidArgumentException
      */
     public function getClientById(string $clientId): ClientInterface
     {
         if (isset($this->clients[$clientId]) === false) {
-            return null;
+            throw ParameterException::createInvalidParameter(
+                AuthorizationRequest::CLIENT_ID_KEY
+            );
         }
 
         return $this->clients[$clientId];

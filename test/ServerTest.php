@@ -93,7 +93,7 @@ class ServerTest extends TestCase
         $this->assertInstanceOf(Server::class, $server);
     }
 
-    public function testImplementsServerInterface()
+    public function testInstanceImplementsServerInterface()
     {
         $this->assertInstanceOf(ServerInterface::class, $this->getServer());
     }
@@ -161,6 +161,23 @@ class ServerTest extends TestCase
         $this->assertInstanceOf(ResponseInterface::class, $response);
         $this->assertEquals(
             "{\"code\":400,\"message\":\"Required parameter \u0027client_id\u0027 missing\"}",
+            $response->getBody()->getContents()
+        );
+    }
+
+    public function testAuthorizationWithUndefinedClientIdReturnError()
+    {
+        $serverRequest = $this->getServerRequest()->withQueryParams([
+            'client_id' => 'super_test', // test expected
+            'redirect_uri' => 'http://example.com',
+            'response_type' => 'token',
+        ]);
+
+        $response = $this->getServer()->authorize($serverRequest);
+
+        $this->assertInstanceOf(ResponseInterface::class, $response);
+        $this->assertEquals(
+            "{\"code\":400,\"message\":\"Invalid \u0027client_id\u0027 parameter\"}",
             $response->getBody()->getContents()
         );
     }

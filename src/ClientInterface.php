@@ -7,10 +7,10 @@ interface ClientInterface
     /**
      * @return string
      */
-    public function getClientId();
+    public function getClientId(): string;
 
     /**
-     * @return array
+     * @return string
      */
-    public function getListRedirectUri();
+    public function getRedirectUri(): string;
 }

@@ -2,8 +2,6 @@
 
 namespace OAuth2\Grant\Implicit;
 
-use InvalidArgumentException;
-
 class Client implements ClientInterface
 {
     /**
@@ -12,25 +10,17 @@ class Client implements ClientInterface
     protected $identificator;
 
     /**
-     * @var array
+     * @var string
      */
-    protected $redirectUriList = [];
+    protected $redirectUriList;
 
     /**
      * Client constructor.
      * @param string $identificator
      * @param string|array $redirectUri
      */
-    public function __construct(string $identificator, $redirectUri)
+    public function __construct(string $identificator, string $redirectUri)
     {
-        if (is_string($redirectUri) === true) {
-            $redirectUri = [$redirectUri];
-        }
-
-        if (is_array($redirectUri) === false) {
-            throw new InvalidArgumentException('The redirect url list must be type string or array');
-        }
-
         $this->identificator = $identificator;
         $this->redirectUriList = $redirectUri;
     }
@@ -46,7 +36,7 @@ class Client implements ClientInterface
     /**
      * @return array
      */
-    public function getListRedirectUri(): array
+    public function getRedirectUri(): string
     {
         return $this->redirectUriList;
     }
