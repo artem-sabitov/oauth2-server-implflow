@@ -3,6 +3,7 @@
 namespace OAuth2\Grant\Implicit;
 
 use InvalidArgumentException;
+use OAuth2\Grant\Implicit\Exception\ParameterException;
 use Psr\Http\Message\ServerRequestInterface;
 
 class AuthorizationRequest
@@ -14,19 +15,19 @@ class AuthorizationRequest
     const RESPONSE_TYPE_KEY = 'response_type';
 
     /**
-     * @var string
+     * @var string|null
      */
-    protected $clientId = '';
+    protected $clientId = null;
 
     /**
-     * @var string
+     * @var string|null
      */
-    protected $redirectUri = '';
+    protected $redirectUri = null;
 
     /**
-     * @var string
+     * @var string|null
      */
-    protected $responseType = '';
+    protected $responseType = null;
 
     /**
      * AuthorizationRequest constructor.
@@ -61,7 +62,7 @@ class AuthorizationRequest
     }
 
     /**
-     * @inheritdoc
+     * @return string
      */
     public function getRedirectUri(): string
     {
@@ -83,9 +84,9 @@ class AuthorizationRequest
     }
 
     /**
-     * @inheritdoc
+     * @return string
      */
-    public function getResponseType()
+    public function getResponseType(): string
     {
         return $this->responseType;
     }
@@ -109,7 +110,20 @@ class AuthorizationRequest
      */
     private function setParams(array $params): void
     {
-        foreach ($params as $key => $value) {
+        $requiredParameters = [
+            self::CLIENT_ID_KEY,
+            self::REDIRECT_URI_KEY,
+            self::RESPONSE_TYPE_KEY,
+        ];
+
+        foreach ($requiredParameters as $key) {
+            if (isset($params[$key]) === false) {
+                throw ParameterException::createMissingParameter($key);
+            }
+
+            $value = $params[$key];
+            $this->validateQueryParameter($key, $value);
+
             switch ($key) {
                 case self::CLIENT_ID_KEY:
                     $this->clientId = $value;
@@ -129,12 +143,12 @@ class AuthorizationRequest
      * @return bool
      * @throw InvalidArgumentException;
      */
-    private function validateQueryParameter(string $name, string $value): void
+    private function validateQueryParameter(string $name, $value): void
     {
+        $value = (string) $value;
+
         if (mb_strlen($value) === 0 || mb_strlen($value) > self::MAX_PARAMETER_LENGTH) {
-            throw new InvalidArgumentException(sprintf(
-                'Invalid %s %s', $name, $value
-            ));
+            throw ParameterException::createInvalidParameter($name);
         }
     }
 }

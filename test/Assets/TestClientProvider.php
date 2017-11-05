@@ -4,9 +4,9 @@ namespace OAuth2Test\Grant\Implicit\Assets;
 
 use OAuth2\Grant\Implicit\Client;
 use OAuth2\Grant\Implicit\ClientInterface;
-use OAuth2\Grant\Implicit\Storage\ClientStorageInterface;
+use OAuth2\Grant\Implicit\Provider\ClientProviderInterface;
 
-class TestClientStorage implements ClientStorageInterface
+class TestClientProvider implements ClientProviderInterface
 {
     const TEST_CLIENT_ID = 'test';
 

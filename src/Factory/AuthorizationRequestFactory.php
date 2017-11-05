@@ -5,16 +5,28 @@ namespace OAuth2\Grant\Implicit\Factory;
 use InvalidArgumentException;
 use OAuth2\Grant\Implicit\AuthorizationRequest;
 use Psr\Http\Message\ServerRequestInterface;
+use Zend\Diactoros\ServerRequestFactory;
 
 class AuthorizationRequestFactory
 {
     /**
-     * @param ServerRequestInterface $request
      * @return AuthorizationRequest
      * @throws InvalidArgumentException
      */
-    public static function fromServerRequest(ServerRequestInterface $request)
+    public static function fromGlobalServerRequest()
     {
-        return new AuthorizationRequest($request);
+        return self::fromServerRequest(
+            ServerRequestFactory::fromGlobals()
+        );
+    }
+
+    /**
+     * @param ServerRequestInterface $serverRequest
+     * @return AuthorizationRequest
+     * @throws InvalidArgumentException
+     */
+    public static function fromServerRequest(ServerRequestInterface $serverRequest)
+    {
+        return new AuthorizationRequest($serverRequest);
     }
 }

@@ -2,45 +2,49 @@
 
 namespace OAuth2Test\Grant\Implicit;
 
+use OAuth2\Grant\Implicit\AuthorizationRequest;
 use OAuth2\Grant\Implicit\ClientInterface;
 use OAuth2\Grant\Implicit\Messages;
-use OAuth2\Grant\Implicit\Storage\AccessTokenStorageInterface;
-use OAuth2\Grant\Implicit\Storage\ClientStorageInterface;
-use OAuth2\Grant\Implicit\Adapter\AdapterInterface;
+use OAuth2\Grant\Implicit\Options\ServerOptions;
+use OAuth2\Grant\Implicit\Provider\ClientProviderInterface;
 use OAuth2\Grant\Implicit\Provider\IdentityProviderInterface;
 use OAuth2\Grant\Implicit\Server;
 use OAuth2\Grant\Implicit\ServerInterface;
-use OAuth2Test\Grant\Implicit\Assets\TestClientStorage;
+use OAuth2\Grant\Implicit\Storage\TokenStorageInterface;
+use OAuth2Test\Grant\Implicit\Assets\TestClientProvider;
 use OAuth2Test\Grant\Implicit\Assets\TestIdentityProviderWithoutIdentity;
 use OAuth2Test\Grant\Implicit\Assets\TestSuccessIdentityProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use ReflectionProperty;
 use Zend\Diactoros\ServerRequest as Request;
-use Zend\Diactoros\Uri;
 
 class ServerTest extends TestCase
 {
+    /**
+     * @var ServerOptions
+     */
+    protected $serverOptions;
+
     /**
      * @var IdentityProviderInterface
      */
     private $identityProvider;
 
     /**
-     * @var ClientStorageInterface
+     * @var ClientProviderInterface
      */
-    private $clientStorage;
+    private $clientProvider;
 
     /**
-     * @var AccessTokenStorageInterface
+     * @var TokenStorageInterface
      */
-    private $accessTokenStorage;
+    private $tokenStorage;
 
     /**
      * @var ServerRequestInterface
      */
-    private $request;
+    private $serverRequest;
 
     /**
      * @var ServerInterface|Server
@@ -49,37 +53,25 @@ class ServerTest extends TestCase
 
     protected function setUp()
     {
+        $this->serverOptions = new ServerOptions();
         $this->identityProvider = new TestSuccessIdentityProvider();
-        $this->clientStorage = new TestClientStorage();
-        $this->accessTokenStorage = $this->createMock(AccessTokenStorageInterface::class);
-        $this->request = new Request([], [], 'http://example.com/', 'GET', 'php://memory');
+        $this->clientProvider = new TestClientProvider();
+        $this->tokenStorage = $this->createMock(TokenStorageInterface::class);
+    }
 
-        $this->server = new Server(
+    public function getServer()
+    {
+        return new Server(
+            $this->serverOptions,
             $this->identityProvider,
-            $this->clientStorage,
-            $this->accessTokenStorage,
-            $this->request
+            $this->clientProvider,
+            $this->tokenStorage
         );
     }
 
-    public function testImplementsServerInterface()
+    public function getServerRequest()
     {
-        $this->assertInstanceOf(ServerInterface::class, $this->server);
-    }
-
-    public function testGetServerRequestReturnServerRequestInterface()
-    {
-        $this->assertInstanceOf(ServerRequestInterface::class, $this->server->getServerRequest());
-    }
-
-    public function testGetAuthorizationAdapterReturnAdapterInterface()
-    {
-        $this->assertInstanceOf(AdapterInterface::class, $this->server->getAuthorizationAdapter());
-    }
-
-    public function testSuccessAuthorizationReturnAccessToken()
-    {
-        $this->request = new Request(
+        return new Request(
             [],
             [],
             'http://example.com/',
@@ -90,31 +82,66 @@ class ServerTest extends TestCase
             [
                 'client_id' => 'test',
                 'redirect_uri' => 'http://example.com',
+                'response_type' => 'token',
             ]
         );
+    }
 
-        $this->server = new Server(
-            $this->identityProvider,
-            $this->clientStorage,
-            $this->accessTokenStorage,
-            $this->request
+    public function testConstructorAcceptsAnArguments()
+    {
+        $server = $this->getServer();
+        $this->assertInstanceOf(Server::class, $server);
+    }
+
+    public function testImplementsServerInterface()
+    {
+        $this->assertInstanceOf(ServerInterface::class, $this->getServer());
+    }
+
+    public function testServerCanCreateAuthorizationRequestFromGlobalServerRequest()
+    {
+        $_GET = [
+            'client_id' => 'test',
+            'redirect_uri' => 'http://example.com',
+            'response_type' => 'token',
+        ];
+
+        $this->assertInstanceOf(
+            AuthorizationRequest::class,
+            $this->getServer()->getAuthorizationRequest()
+        );
+    }
+
+    public function testSetAuthorizationRequestReturnNewServerInstanceWithRequest()
+    {
+        $server = $this->getServer();
+        $newServerInstance = $server->setAuthorizationRequest(
+            new AuthorizationRequest($this->getServerRequest())
         );
 
-        $response = $this->server->authorize();
-        $this->assertInstanceOf(ResponseInterface::class, $response);
+        $this->assertNotSame($server, $newServerInstance);
+    }
 
-        $this->assertArrayHasKey('location', $response->getHeaders());
+    public function testSuccessAuthorizationReturnAccessToken()
+    {
+        $server = $this->getServer();
+        $response = $server->authorize($this->getServerRequest());
+
+        $this->assertInstanceOf(ResponseInterface::class, $response);
 
         $body = $response->getBody()->getContents();
         $this->assertEquals('', $body);
 
-        $redirectUri = new Uri($response->getHeader('location')[0]);
-        $this->assertStringMatchesFormat('access_token=%s', $redirectUri->getQuery());
+        $this->assertArrayHasKey('location', $response->getHeaders());
+        $this->assertStringMatchesFormat(
+            'http://example.com?access_token=%s',
+            $response->getHeader('location')[0]
+        );
     }
 
     public function testAuthorizationWithoutClientIdReturnError()
     {
-        $this->request = new Request(
+        $serverRequest = new Request(
             [],
             [],
             'http://example.com/',
@@ -124,28 +151,23 @@ class ServerTest extends TestCase
             [],
             [
                 'redirect_uri' => 'http://example.com',
+                'response_type' => 'token',
             ]
         );
 
-        $this->server = new Server(
-            $this->identityProvider,
-            $this->clientStorage,
-            $this->accessTokenStorage,
-            $this->request
-        );
-
-        $response = $this->server->authorize();
+        $server = $this->getServer();
+        $response = $server->authorize($serverRequest);
 
         $this->assertInstanceOf(ResponseInterface::class, $response);
         $this->assertEquals(
-            "{\"code\":400,\"message\":\"You must include a valid \u0027client_id\u0027 parameter\"}",
+            "{\"code\":400,\"message\":\"Required parameter \u0027client_id\u0027 missing\"}",
             $response->getBody()->getContents()
         );
     }
 
     public function testAuthorizationWithoutRedirectUriReturnError()
     {
-        $this->request = new Request(
+        $serverRequest = new Request(
             [],
             [],
             'http://example.com/',
@@ -155,21 +177,42 @@ class ServerTest extends TestCase
             [],
             [
                 'client_id' => 'test',
+                'response_type' => 'token',
             ]
         );
 
-        $this->server = new Server(
-            $this->identityProvider,
-            $this->clientStorage,
-            $this->accessTokenStorage,
-            $this->request
-        );
-
-        $response = $this->server->authorize();
+        $server = $this->getServer();
+        $response = $server->authorize($serverRequest);
 
         $this->assertInstanceOf(ResponseInterface::class, $response);
         $this->assertEquals(
-            "{\"code\":400,\"message\":\"You must include a valid \u0027redirect_uri\u0027 parameter\"}",
+            "{\"code\":400,\"message\":\"Required parameter \u0027redirect_uri\u0027 missing\"}",
+            $response->getBody()->getContents()
+        );
+    }
+
+    public function testAuthorizationWithoutResponseTypeReturnError()
+    {
+        $serverRequest = new Request(
+            [],
+            [],
+            'http://example.com/',
+            'GET',
+            'php://memory',
+            [],
+            [],
+            [
+                'client_id' => 'test',
+                'redirect_uri' => 'http://example.com',
+            ]
+        );
+
+        $server = $this->getServer();
+        $response = $server->authorize($serverRequest);
+
+        $this->assertInstanceOf(ResponseInterface::class, $response);
+        $this->assertEquals(
+            "{\"code\":400,\"message\":\"Required parameter \u0027response_type\u0027 missing\"}",
             $response->getBody()->getContents()
         );
     }
@@ -178,43 +221,31 @@ class ServerTest extends TestCase
     {
         $this->identityProvider = new TestIdentityProviderWithoutIdentity();
 
-        $this->server = new Server(
-            $this->identityProvider,
-            $this->clientStorage,
-            $this->accessTokenStorage,
-            $this->request
-        );
-
-        $response = $this->server->authorize();
+        $server = $this->getServer();
+        $response = $server->authorize($this->getServerRequest());
 
         $this->assertInstanceOf(ResponseInterface::class, $response);
         $this->assertArrayHasKey('location', $response->getHeaders());
     }
 
-    public function getClientStorageFromServer(ServerInterface $server)
+    public function testGetClientProviderFromServer()
     {
-        $r = new ReflectionProperty($server, 'clientStorage');
-        $r->setAccessible(true);
-
-        return $r->getValue($server);
+        $clientProvider = $this->getServer()->getClientProvider();
+        $this->assertInstanceOf(ClientProviderInterface::class, $clientProvider);
+        $this->assertSame($this->clientProvider, $clientProvider);
     }
 
-    public function testGetClientStorageFromServer()
+    public function testServerClientProviderProvideClientByClientId()
     {
-        $clientStorage = $this->getClientStorageFromServer($this->server);
-        $this->assertInstanceOf(ClientStorageInterface::class, $clientStorage);
-    }
-
-    public function testGetClientFromStorage()
-    {
-        $clientStorage = $this->getClientStorageFromServer($this->server);
-        $client = $clientStorage->getClientById('test');
+        $clientProvider = $this->getServer()->getClientProvider();
+        $client = $clientProvider->getClientById('test');
+        $this->assertSame($this->clientProvider, $clientProvider);
         $this->assertInstanceOf(ClientInterface::class, $client);
     }
 
     public function testGetMessages()
     {
-        $messages = $this->server->getMessages();
+        $messages = $this->getServer()->getMessages();
         $this->assertInstanceOf(Messages::class, $messages);
     }
 }

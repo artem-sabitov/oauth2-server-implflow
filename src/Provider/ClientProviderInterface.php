@@ -1,10 +1,10 @@
 <?php
 
-namespace OAuth2\Grant\Implicit\Storage;
+namespace OAuth2\Grant\Implicit\Provider;
 
 use OAuth2\Grant\Implicit\ClientInterface;
 
-interface ClientStorageInterface
+interface ClientProviderInterface
 {
     /**
      * @return ClientInterface

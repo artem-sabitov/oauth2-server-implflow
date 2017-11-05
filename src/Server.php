@@ -3,89 +3,67 @@
 namespace OAuth2\Grant\Implicit;
 
 use OAuth2\Grant\Implicit\Adapter\AdapterInterface;
-use OAuth2\Grant\Implicit\Adapter\AuthorizationAdapter;
+use OAuth2\Grant\Implicit\Exception\AuthenticationException;
 use OAuth2\Grant\Implicit\Exception\AuthenticationRequiredException;
-use OAuth2\Grant\Implicit\Exception\InvalidParameterException;
-use OAuth2\Grant\Implicit\Exception\MissingParameterException;
-use OAuth2\Grant\Implicit\Factory\AuthorizationAdapterFactory;
+use OAuth2\Grant\Implicit\Exception\ParameterException;
+use OAuth2\Grant\Implicit\Factory\AuthorizationRequestFactory;
+use OAuth2\Grant\Implicit\Options\ServerOptions;
+use OAuth2\Grant\Implicit\Provider\ClientProviderInterface;
 use OAuth2\Grant\Implicit\Provider\IdentityProviderInterface;
-use OAuth2\Grant\Implicit\Renderer\AuthenticationForm;
-use OAuth2\Grant\Implicit\Storage\AccessTokenStorageInterface;
-use OAuth2\Grant\Implicit\Storage\ClientStorageInterface;
-use OAuth2\Grant\Implicit\Token\AccessToken;
+use OAuth2\Grant\Implicit\Storage\TokenStorageInterface;
 use OAuth2\Grant\Implicit\Token\AccessTokenFactory;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 use Zend\Diactoros\Response;
-use Zend\Diactoros\ServerRequestFactory;
-use Zend\Diactoros\Stream;
 use Zend\Diactoros\Uri;
 
 class Server implements ServerInterface
 {
+    /**
+     * ServerOptions
+     */
+    protected $options;
+
+    /**
+     * @var AuthorizationRequest
+     */
+    protected $authorizationRequest;
+
     /**
      * @var IdentityProviderInterface
      */
     protected $identityProvider;
 
     /**
-     * @var ClientStorageInterface|null
+     * @var ClientProviderInterface
      */
-    protected $clientStorage = null;
+    protected $clientProvider;
 
     /**
-     * @var AccessTokenStorageInterface|null
+     * @var TokenStorageInterface
      */
-    protected $tokenStorage = null;
-
-    /**
-     * @var AdapterInterface|null
-     */
-    protected $authorizationAdapter = null;
-
-    /**
-     * @var ServerRequestInterface|null
-     */
-    protected $serverRequest = null;
+    protected $tokenStorage;
 
     /**
      * @var Messages
      */
-    protected $messages = null;
-
-    /**
-     * @var string
-     */
-    protected $availableResponseType = 'token';
-
-    /**
-     * @var
-     */
-    protected $authenticationUri = '/login';
+    protected $messages;
 
     /**
      * Server constructor.
      * @param ServerRequestInterface $request
      */
     public function __construct(
+        ServerOptions $serverOptions,
         IdentityProviderInterface $identityProvider,
-        ClientStorageInterface $clientStorage,
-        AccessTokenStorageInterface $tokenStorage,
-        ServerRequestInterface $request = null,
-        AdapterInterface $adapter = null
+        ClientProviderInterface $clientProvider,
+        TokenStorageInterface $tokenStorage
     ) {
-        $this->setIdentityProvider($identityProvider);
-        $this->setClientStorage($clientStorage);
-        $this->setTokenStorage($tokenStorage);
-
-        if ($request !== null) {
-            $this->setServerRequest($request);
-        }
-
-        if ($adapter !== null) {
-            $this->setAuthorizationAdapter($adapter);
-        }
+        $this->options = $serverOptions;
+        $this->identityProvider = $identityProvider;
+        $this->clientProvider = $clientProvider;
+        $this->tokenStorage = $tokenStorage;
 
         $this->messages = new Messages();
     }
@@ -96,22 +74,25 @@ class Server implements ServerInterface
      */
     public function authorize(ServerRequestInterface $request = null): ResponseInterface
     {
-        if ($request !== null) {
-            $this->setServerRequest($request);
-        }
-
-        if ($this->getIdentityProvider()->hasIdentity() === false) {
-            return new Response\RedirectResponse($this->authenticationUri);
+        if ($this->isAuthenticated() === false) {
+            return new Response\RedirectResponse(
+                $this->options->getAuthenticationUri()
+            );
         }
 
         try {
+            if ($request !== null) {
+                $this->authorizationRequest =
+                    AuthorizationRequestFactory::fromServerRequest($request);
+            }
+
             $redirectUri = $this->getRedirectUri();
             $accessToken = $this->createAccessToken();
 
             $query = [
                 'access_token' => $accessToken->getAccessToken(),
             ];
-        } catch (MissingParameterException | InvalidParameterException $e) {
+        } catch (ParameterException $e) {
             return $this->createErrorResponse(400, $e->getMessage());
         }
 
@@ -121,12 +102,20 @@ class Server implements ServerInterface
     }
 
     /**
+     * @return bool
+     */
+    public function isAuthenticated(): bool
+    {
+        return $this->getIdentityProvider()->hasIdentity();
+    }
+
+    /**
      * @return Token\AccessToken
      * @throws \InvalidArgumentException
      */
     protected function createAccessToken()
     {
-        $client = $this->getClientFromStorage();
+        $client = $this->getClientFromProvider();
         $identity = $this->getIdentityFromProvider();
 
         $accessToken = AccessTokenFactory::create(
@@ -151,31 +140,26 @@ class Server implements ServerInterface
 
     /**
      * @return ClientInterface
-     * @throws \InvalidArgumentException
+     * @throws ParameterException
      */
-    protected function getClientFromStorage()
+    protected function getClientFromProvider()
     {
-        $clientId = $this->getAuthorizationAdapter()->getClientId();
-        if ($clientId === null) {
-            throw MissingParameterException::create(
-                AuthorizationAdapter::CLIENT_ID_KEY
-            );
-        }
+        $clientId = $this->getAuthorizationRequest()->getClientId();
 
         /** @var ClientInterface $client */
-        $client = $this->getClientStorage()->getClientById($clientId);
+        $client = $this->getClientProvider()->getClientById($clientId);
 
         return $client;
     }
 
     /**
      * @return IdentityInterface
-     * @throws AuthenticationRequiredException
+     * @throws AuthenticationException
      */
     protected function getIdentityFromProvider()
     {
         if ($this->getIdentityProvider()->hasIdentity() === false) {
-            throw new AuthenticationRequiredException('Authentication failed');
+            throw new AuthenticationException('Authentication failed');
         }
 
         return $this->getIdentityProvider()->getIdentity();
@@ -183,18 +167,12 @@ class Server implements ServerInterface
 
     /**
      * @return string
-     * @throws InvalidParameterException
+     * @throws ParameterException
      */
     protected function getRedirectUri()
     {
-        $client = $this->getClientFromStorage();
-
-        $redirectUri = $this->getAuthorizationAdapter()->getRedirectUri();
-        if ($redirectUri === null) {
-            throw MissingParameterException::create(
-                AuthorizationAdapter::REDIRECT_URI_KEY
-            );
-        }
+        $client = $this->getClientFromProvider();
+        $redirectUri = $this->getAuthorizationRequest()->getRedirectUri();
 
         foreach ($client->getListRedirectUri() as $uri) {
             if ($uri === $redirectUri) {
@@ -202,8 +180,8 @@ class Server implements ServerInterface
             }
         }
 
-        throw InvalidParameterException::create(
-            AuthorizationAdapter::REDIRECT_URI_KEY,
+        throw ParameterException::createInvalidParameter(
+            AuthorizationRequest::REDIRECT_URI_KEY,
             $redirectUri
         );
     }
@@ -243,18 +221,6 @@ class Server implements ServerInterface
     }
 
     /**
-     * @return null|AdapterInterface
-     */
-    public function getAuthorizationAdapter()
-    {
-        if ($this->authorizationAdapter === null) {
-            $this->authorizationAdapter = AuthorizationAdapterFactory::fromServerRequest($this->getServerRequest());
-        }
-
-        return $this->authorizationAdapter;
-    }
-
-    /**
      * @param null|AdapterInterface $authorizationAdapter
      */
     public function setAuthorizationAdapter(AdapterInterface $authorizationAdapter)
@@ -263,23 +229,27 @@ class Server implements ServerInterface
     }
 
     /**
-     * @return ClientStorageInterface|null
+     * @return ClientProviderInterface
      */
-    public function getClientStorage()
+    public function getClientProvider()
     {
-        return $this->clientStorage;
+        return $this->clientProvider;
     }
 
     /**
-     * @param ClientStorageInterface|null $clientStorage
+     * Method returning a new immutable object with new value.
+     * @param ClientProviderInterface $clientProvider
      */
-    public function setClientStorage($clientStorage)
+    public function setClientProvider($clientProvider)
     {
-        $this->clientStorage = $clientStorage;
+        $server = clone $this;
+        $server->clientProvider = $clientProvider;
+
+        return $server;
     }
 
     /**
-     * @return AccessTokenStorageInterface|null
+     * @return TokenStorageInterface
      */
     public function getTokenStorage()
     {
@@ -287,31 +257,41 @@ class Server implements ServerInterface
     }
 
     /**
-     * @param AccessTokenStorageInterface|null $tokenStorage
+     * Method returning a new immutable object with new value.
+     * @param TokenStorageInterface $tokenStorage
      */
     public function setTokenStorage($tokenStorage)
     {
-        $this->tokenStorage = $tokenStorage;
+        $server = clone $this;
+        $server->tokenStorage = $tokenStorage;
+
+        return $server;
     }
 
     /**
-     * @return ServerRequestInterface
+     * @return AuthorizationRequest
      */
-    public function getServerRequest()
+    public function getAuthorizationRequest()
     {
-        if ($this->serverRequest === null) {
-            $this->serverRequest = ServerRequestFactory::fromGlobals();
+        if ($this->authorizationRequest === null) {
+            $this->authorizationRequest =
+                AuthorizationRequestFactory::fromGlobalServerRequest();
         }
 
-        return $this->serverRequest;
+        return $this->authorizationRequest;
     }
 
     /**
-     * @param null|ServerRequestInterface $serverRequest
+     * Method returning a new immutable object with new value.
+     * @param AuthorizationRequest $request
+     * @return Server
      */
-    public function setServerRequest(ServerRequestInterface $serverRequest)
+    public function setAuthorizationRequest(AuthorizationRequest $request)
     {
-        $this->serverRequest = $serverRequest;
+        $server = clone $this;
+        $server->authorizationRequest = $request;
+
+        return $server;
     }
 
     /**

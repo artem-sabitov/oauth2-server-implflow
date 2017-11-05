@@ -4,6 +4,7 @@ namespace OAuth2Test\Grant\Implicit;
 
 use InvalidArgumentException;
 use OAuth2\Grant\Implicit\AuthorizationRequest;
+use OAuth2\Grant\Implicit\Exception\ParameterException;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 use Zend\Diactoros\ServerRequest as Request;
@@ -22,28 +23,26 @@ class AuthorizationRequestTest extends TestCase
 
     public function setUp()
     {
-        $this->serverRequest = new Request([], [], 'http://example.com/', 'GET');
+        $this->serverRequest = new Request(
+            [],
+            [],
+            'http://example.com/',
+            'GET',
+            'php://memory',
+            [],
+            [],
+            [
+                'client_id' => 'test',
+                'redirect_uri' => 'http://example.com',
+                'response_type' => 'token',
+            ]
+        );
         $this->authorizationRequest = new AuthorizationRequest($this->serverRequest);
-    }
-
-    public function testClientIdEmptyByDefault()
-    {
-        $this->assertSame('', $this->authorizationRequest->getClientId());
-    }
-
-    public function testRedirectUriEmptyByDefault()
-    {
-        $this->assertSame('', $this->authorizationRequest->getRedirectUri());
-    }
-
-    public function testResponseTypeEmptyByDefault()
-    {
-        $this->assertSame('', $this->authorizationRequest->getResponseType());
     }
 
     public function testValidatorRaisesExceptionForInvalidParameter()
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(ParameterException::class);
 
         $this->authorizationRequest->withClientId('');
     }

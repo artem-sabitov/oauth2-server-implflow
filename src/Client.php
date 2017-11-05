@@ -28,7 +28,7 @@ class Client implements ClientInterface
         }
 
         if (is_array($redirectUri) === false) {
-            throw new InvalidArgumentException('The redirect url list must be type string or array.');
+            throw new InvalidArgumentException('The redirect url list must be type string or array');
         }
 
         $this->identificator = $identificator;
