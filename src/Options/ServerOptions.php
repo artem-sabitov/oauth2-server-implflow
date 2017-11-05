@@ -9,7 +9,7 @@ class ServerOptions extends AbstractOptions
     /**
      * @var string
      */
-    protected $authenticationUri = '/login';
+    protected $authenticationUri = '';
 
     /**
      * @var string

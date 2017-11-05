@@ -4,7 +4,6 @@ namespace OAuth2\Grant\Implicit;
 
 use OAuth2\Grant\Implicit\Adapter\AdapterInterface;
 use OAuth2\Grant\Implicit\Exception\AuthenticationException;
-use OAuth2\Grant\Implicit\Exception\AuthenticationRequiredException;
 use OAuth2\Grant\Implicit\Exception\ParameterException;
 use OAuth2\Grant\Implicit\Factory\AuthorizationRequestFactory;
 use OAuth2\Grant\Implicit\Options\ServerOptions;
@@ -80,22 +79,22 @@ class Server implements ServerInterface
             );
         }
 
-        try {
-            if ($request !== null) {
+        if ($request !== null) {
+            try {
                 $this->authorizationRequest =
                     AuthorizationRequestFactory::fromServerRequest($request);
+            } catch (ParameterException $e) {
+                return $this->createErrorResponse(400, $e->getMessage());
             }
-
-            $redirectUri = $this->getRedirectUri();
-            $accessToken = $this->createAccessToken();
-
-            $query = [
-                'access_token' => $accessToken->getAccessToken(),
-            ];
-        } catch (ParameterException $e) {
-            return $this->createErrorResponse(400, $e->getMessage());
         }
 
+        $redirectUri = $this->getAuthorizationRequest()->getRedirectUri();
+        $this->validateRedirectUri($redirectUri);
+
+        $token = $this->createToken();
+        $this->getTokenStorage()->write($token);
+
+        $query = ['access_token' => $token->getAccessToken(),];
         $redirectUri = $this->createSuccessRedirectUri($redirectUri, $query);
 
         return new Response\RedirectResponse($redirectUri);
@@ -113,7 +112,7 @@ class Server implements ServerInterface
      * @return Token\AccessToken
      * @throws \InvalidArgumentException
      */
-    protected function createAccessToken()
+    protected function createToken()
     {
         $client = $this->getClientFromProvider();
         $identity = $this->getIdentityFromProvider();
@@ -166,23 +165,19 @@ class Server implements ServerInterface
     }
 
     /**
-     * @return string
+     * @return void
      * @throws ParameterException
      */
-    protected function getRedirectUri()
+    protected function validateRedirectUri(string $redirectUri): void
     {
-        $client = $this->getClientFromProvider();
-        $redirectUri = $this->getAuthorizationRequest()->getRedirectUri();
-
-        foreach ($client->getListRedirectUri() as $uri) {
+        foreach ($this->getClientFromProvider()->getListRedirectUri() as $uri) {
             if ($uri === $redirectUri) {
-                return $redirectUri;
+                return;
             }
         }
 
         throw ParameterException::createInvalidParameter(
-            AuthorizationRequest::REDIRECT_URI_KEY,
-            $redirectUri
+            AuthorizationRequest::REDIRECT_URI_KEY
         );
     }
 
