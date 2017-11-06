@@ -4,7 +4,6 @@ namespace OAuth2Test\Grant\Implicit;
 
 use OAuth2\Grant\Implicit\AuthorizationRequest;
 use OAuth2\Grant\Implicit\ClientInterface;
-use OAuth2\Grant\Implicit\Messages;
 use OAuth2\Grant\Implicit\Options\ServerOptions;
 use OAuth2\Grant\Implicit\Provider\ClientProviderInterface;
 use OAuth2\Grant\Implicit\Provider\IdentityProviderInterface;
@@ -16,7 +15,6 @@ use OAuth2Test\Grant\Implicit\Assets\TestIdentityProviderWithoutIdentity;
 use OAuth2Test\Grant\Implicit\Assets\TestSuccessIdentityProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
 use Zend\Diactoros\ServerRequest as Request;
 
 class ServerTest extends TestCase
@@ -40,16 +38,6 @@ class ServerTest extends TestCase
      * @var TokenStorageInterface
      */
     private $tokenStorage;
-
-    /**
-     * @var ServerRequestInterface
-     */
-    private $serverRequest;
-
-    /**
-     * @var ServerInterface|Server
-     */
-    private $server;
 
     protected function setUp()
     {
@@ -258,11 +246,5 @@ class ServerTest extends TestCase
         $client = $clientProvider->getClientById('test');
         $this->assertSame($this->clientProvider, $clientProvider);
         $this->assertInstanceOf(ClientInterface::class, $client);
-    }
-
-    public function testGetMessages()
-    {
-        $messages = $this->getServer()->getMessages();
-        $this->assertInstanceOf(Messages::class, $messages);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace OAuth2\Grant\Implicit\Validator;
 
+use InvalidArgumentException;
 use OAuth2\Grant\Implicit\AuthorizationRequest;
 use OAuth2\Grant\Implicit\Exception\ParameterException;
 use OAuth2\Grant\Implicit\Messages;
@@ -20,6 +21,11 @@ class AuthorizationRequestValidator
         self::INVALID_PARAMETER => 'Invalid \'%s\' parameter',
         self::MISSING_PARAMETER => 'Required parameter \'%s\' missing',
     ];
+
+    /**
+     * @var ClientProviderInterface
+     */
+    private $clientProvider;
 
     /**
      * @var string
@@ -46,6 +52,7 @@ class AuthorizationRequestValidator
         string $supportedRedirectUri
     ) {
         $this->messages = new Messages();
+        $this->clientProvider = $clientProvider;
         $this->supportedResponseType = $supportedResponseType;
         $this->supportedRedirectUri = $supportedRedirectUri;
     }
@@ -59,8 +66,9 @@ class AuthorizationRequestValidator
             $request = new AuthorizationRequest($request);
         }
 
-        $this->validateResponseType($request->getResponseType());
+        $this->validateClientId($request->getClientId());
         $this->validateRedirectUri($request->getRedirectUri());
+        $this->validateResponseType($request->getResponseType());
     }
 
     /**
@@ -71,8 +79,25 @@ class AuthorizationRequestValidator
         return $this->messages->toArray();
     }
 
-    public function validateClientId(): bool
+    /**
+     * @return bool
+     */
+    public function validateClientId(string $clientId): bool
     {
+        try {
+            $client = $this->clientProvider->getClientById($clientId);
+        } catch (InvalidArgumentException $e) {
+            $this->messages->addErrorMessage(
+                AuthorizationRequest::CLIENT_ID_KEY,
+                sprintf(
+                    self::$messageTemplates[self::INVALID_PARAMETER],
+                    AuthorizationRequest::CLIENT_ID_KEY
+                )
+            );
+
+            return false;
+        }
+
         return true;
     }
 

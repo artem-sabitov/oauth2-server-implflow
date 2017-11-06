@@ -45,11 +45,6 @@ class Server implements ServerInterface
     protected $tokenStorage;
 
     /**
-     * @var Messages
-     */
-    protected $messages;
-
-    /**
      * Server constructor.
      * @param ServerRequestInterface $request
      */
@@ -63,8 +58,6 @@ class Server implements ServerInterface
         $this->identityProvider = $identityProvider;
         $this->clientProvider = $clientProvider;
         $this->tokenStorage = $tokenStorage;
-
-        $this->messages = new Messages();
     }
 
     /**
@@ -282,13 +275,5 @@ class Server implements ServerInterface
             $responseType,
             $clientRedirectUri
         );
-    }
-
-    /**
-     * @return Messages
-     */
-    public function getMessages()
-    {
-        return $this->messages;
     }
 }

@@ -1,12 +1,12 @@
 
 
 Code Coverage Report:      
-  2017-11-06 02:54:19      
+  2017-11-06 03:05:41      
                            
  Summary:                  
   Classes: 53.85% (7/13)   
-  Methods: 71.43% (45/63)  
-  Lines:   76.47% (156/204)
+  Methods: 72.58% (45/62)  
+  Lines:   77.83% (165/212)
 
 \OAuth2\Grant\Implicit::AuthorizationRequest
   Methods: 100.00% ( 9/ 9)   Lines: 100.00% ( 39/ 39)
@@ -17,7 +17,7 @@ Code Coverage Report:
 \OAuth2\Grant\Implicit::Messages
   Methods: 100.00% ( 2/ 2)   Lines: 100.00% (  3/  3)
 \OAuth2\Grant\Implicit::Server
-  Methods:  77.78% (14/18)   Lines:  84.72% ( 61/ 72)
+  Methods:  76.47% (13/17)   Lines:  84.29% ( 59/ 70)
 \OAuth2\Grant\Implicit\Exception::ParameterException
   Methods:  60.00% ( 3/ 5)   Lines:  64.29% (  9/ 14)
 \OAuth2\Grant\Implicit\Factory::AuthorizationRequestFactory
@@ -31,4 +31,4 @@ Code Coverage Report:
 \OAuth2\Grant\Implicit\Token::AccessTokenFactory
   Methods: 100.00% ( 2/ 2)   Lines: 100.00% (  8/  8)
 \OAuth2\Grant\Implicit\Validator::AuthorizationRequestValidator
-  Methods:  16.67% ( 1/ 6)   Lines:  44.44% ( 12/ 27)
+  Methods:  33.33% ( 2/ 6)   Lines:  62.16% ( 23/ 37)
