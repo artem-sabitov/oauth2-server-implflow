@@ -2,7 +2,6 @@
 
 namespace OAuth2\Grant\Implicit;
 
-use OAuth2\Grant\Implicit\Exception\AuthenticationException;
 use OAuth2\Grant\Implicit\Exception\ParameterException;
 use OAuth2\Grant\Implicit\Factory\AuthorizationRequestFactory;
 use OAuth2\Grant\Implicit\Options\ServerOptions;
@@ -87,10 +86,9 @@ class Server implements ServerInterface
 
             $token = $this->createToken();
             $this->getTokenStorage()->write($token);
-
             $redirectUri = $this->createRedirectUriWithAccessToken($token);
         } catch (ParameterException $e) {
-            return $this->createErrorResponse(400, $e->getMessage());
+            return $this->createErrorResponse(400, $e->getMessages());
         }
 
         return new Response\RedirectResponse($redirectUri);
@@ -111,7 +109,11 @@ class Server implements ServerInterface
     public function validateAuthorizationRequest(AuthorizationRequest $request): void
     {
         $validator = $this->getAuthorizationRequestValidator();
-        $validator->validate($this->getAuthorizationRequest());
+
+        if ($validator->validate($request) === false) {
+            $messages = $validator->getMessages();
+            throw ParameterException::create($messages);
+        }
     }
 
     /**
@@ -162,7 +164,7 @@ class Server implements ServerInterface
     /**
      * @return Response\JsonResponse
      */
-    public function createErrorResponse(int $code, string $message): ResponseInterface
+    public function createErrorResponse(int $code, array $message): ResponseInterface
     {
         $body = [
             'code' => $code,
@@ -276,7 +278,9 @@ class Server implements ServerInterface
             ->getRedirectUri();
 
         return new AuthorizationRequestValidator(
-            $responseType, $clientRedirectUri
+            $this->getClientProvider(),
+            $responseType,
+            $clientRedirectUri
         );
     }
 

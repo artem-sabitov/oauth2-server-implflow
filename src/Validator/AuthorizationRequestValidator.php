@@ -5,6 +5,7 @@ namespace OAuth2\Grant\Implicit\Validator;
 use OAuth2\Grant\Implicit\AuthorizationRequest;
 use OAuth2\Grant\Implicit\Exception\ParameterException;
 use OAuth2\Grant\Implicit\Messages;
+use OAuth2\Grant\Implicit\Provider\ClientProviderInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 class AuthorizationRequestValidator
@@ -39,8 +40,11 @@ class AuthorizationRequestValidator
      * AuthorizationRequestValidator constructor.
      * @param string $supportedResponseType
      */
-    public function __construct(string $supportedResponseType, string $supportedRedirectUri)
-    {
+    public function __construct(
+        ClientProviderInterface $clientProvider,
+        string $supportedResponseType,
+        string $supportedRedirectUri
+    ) {
         $this->messages = new Messages();
         $this->supportedResponseType = $supportedResponseType;
         $this->supportedRedirectUri = $supportedRedirectUri;
@@ -60,34 +64,22 @@ class AuthorizationRequestValidator
     }
 
     /**
-     * @return Messages
+     * @return array
      */
     public function getMessages()
     {
-        return $this->messages;
+        return $this->messages->toArray();
     }
 
-    /**
-     * @throws ParameterException
-     */
-    public function validateResponseType(string $responseType): void
+    public function validateClientId(): bool
     {
-        if ($responseType !== $this->supportedResponseType) {
-            $this->messages->addErrorMessage(
-                AuthorizationRequest::RESPONSE_TYPE_KEY,
-                sprintf(
-                    self::$messageTemplates[self::INVALID_PARAMETER],
-                    AuthorizationRequest::RESPONSE_TYPE_KEY
-                )
-            );
-        }
+        return true;
     }
 
     /**
-     * @return void
-     * @throws ParameterException
+     * @return bool
      */
-    public function validateRedirectUri(string $redirectUri): void
+    public function validateRedirectUri(string $redirectUri): bool
     {
         if ($redirectUri !== $this->supportedRedirectUri) {
             $this->messages->addErrorMessage(
@@ -97,6 +89,29 @@ class AuthorizationRequestValidator
                     AuthorizationRequest::RESPONSE_TYPE_KEY
                 )
             );
+            return false;
         }
+
+        return true;
+    }
+
+    /**
+     * @return bool
+     */
+    public function validateResponseType(string $responseType): bool
+    {
+        if ($responseType !== $this->supportedResponseType) {
+            $this->messages->addErrorMessage(
+                AuthorizationRequest::RESPONSE_TYPE_KEY,
+                sprintf(
+                    self::$messageTemplates[self::INVALID_PARAMETER],
+                    AuthorizationRequest::RESPONSE_TYPE_KEY
+                )
+            );
+
+            return false;
+        }
+
+        return true;
     }
 }

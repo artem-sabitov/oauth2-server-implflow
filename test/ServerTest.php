@@ -160,7 +160,7 @@ class ServerTest extends TestCase
 
         $this->assertInstanceOf(ResponseInterface::class, $response);
         $this->assertEquals(
-            "{\"code\":400,\"message\":\"Required parameter \u0027client_id\u0027 missing\"}",
+            "{\"code\":400,\"message\":[\"Required parameter \u0027client_id\u0027 missing\"]}",
             $response->getBody()->getContents()
         );
     }
@@ -177,7 +177,7 @@ class ServerTest extends TestCase
 
         $this->assertInstanceOf(ResponseInterface::class, $response);
         $this->assertEquals(
-            "{\"code\":400,\"message\":\"Invalid \u0027client_id\u0027 parameter\"}",
+            "{\"code\":400,\"message\":[\"Invalid \u0027client_id\u0027 parameter\"]}",
             $response->getBody()->getContents()
         );
     }
@@ -203,7 +203,7 @@ class ServerTest extends TestCase
 
         $this->assertInstanceOf(ResponseInterface::class, $response);
         $this->assertEquals(
-            "{\"code\":400,\"message\":\"Required parameter \u0027redirect_uri\u0027 missing\"}",
+            "{\"code\":400,\"message\":[\"Required parameter \u0027redirect_uri\u0027 missing\"]}",
             $response->getBody()->getContents()
         );
     }
@@ -229,7 +229,7 @@ class ServerTest extends TestCase
 
         $this->assertInstanceOf(ResponseInterface::class, $response);
         $this->assertEquals(
-            "{\"code\":400,\"message\":\"Required parameter \u0027response_type\u0027 missing\"}",
+            "{\"code\":400,\"message\":[\"Required parameter \u0027response_type\u0027 missing\"]}",
             $response->getBody()->getContents()
         );
     }

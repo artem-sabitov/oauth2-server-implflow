@@ -18,6 +18,11 @@ class ParameterException extends InvalidArgumentException
     ];
 
     /**
+     * @var array
+     */
+    protected $messages;
+
+    /**
      * @param string $parameterName
      * @param string $value
      * @return ParameterException
@@ -36,5 +41,32 @@ class ParameterException extends InvalidArgumentException
             self::$messageTemplates[self::MISSING_PARAMETER],
             $parameterName
         ));
+    }
+
+    public static function create(array $messages)
+    {
+        $e = (new self())->withMessages($messages);
+
+        return $e;
+    }
+
+    /**
+     * @return array
+     */
+    public function getMessages()
+    {
+        if ($this->messages === null) {
+            $this->messages = [$this->getMessage()];
+        }
+
+        return $this->messages;
+    }
+
+    public function withMessages(array $messages)
+    {
+        $new = clone $this;
+        $new->messages = $messages;
+
+        return $new;
     }
 }
