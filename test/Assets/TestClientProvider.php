@@ -34,7 +34,7 @@ class TestClientProvider implements ClientProviderInterface
     }
 
     /**
-     * @return ClientInterface|null
+     * @return ClientInterface
      * @throws InvalidArgumentException
      */
     public function getClientById(string $clientId): ClientInterface
@@ -46,5 +46,11 @@ class TestClientProvider implements ClientProviderInterface
         }
 
         return $this->clients[$clientId];
+    }
+
+    public function hasClientById(string $clientId): bool
+    {
+        return isset($this->clients[$clientId]) &&
+            $this->clients[$clientId] instanceof ClientInterface;
     }
 }

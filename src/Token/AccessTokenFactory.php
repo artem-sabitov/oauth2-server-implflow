@@ -2,6 +2,7 @@
 
 namespace OAuth2\Grant\Implicit\Token;
 
+use OAuth2\Grant\Implicit\ClientInterface;
 use OAuth2\Grant\Implicit\IdentityInterface;
 
 class AccessTokenFactory
@@ -13,14 +14,13 @@ class AccessTokenFactory
      * @param string $clientId
      * @return AccessToken
      */
-    public static function create(IdentityInterface $identity, string $clientId)
+    public static function create(IdentityInterface $identity, ClientInterface $client)
     {
-        $accessToken = (new AccessToken())
-            ->setIdentity($identity)
-            ->setClientId($clientId)
-            ->setAccessToken(self::generateRandomString(static::TOKEN_LENGTH));
-
-        return $accessToken;
+        return new AccessToken(
+            self::generateRandomString(static::TOKEN_LENGTH),
+            $identity,
+            $client
+        );
     }
 
     /**

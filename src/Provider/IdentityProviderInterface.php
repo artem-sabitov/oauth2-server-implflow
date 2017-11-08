@@ -8,6 +8,7 @@ interface IdentityProviderInterface
 {
     /**
      * @return IdentityInterface
+     * @throws \InvalidArgumentException
      */
     public function getIdentity(): IdentityInterface;
 

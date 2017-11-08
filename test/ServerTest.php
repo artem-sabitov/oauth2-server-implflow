@@ -79,6 +79,9 @@ class ServerTest extends TestCase
     {
         $server = $this->getServer();
         $this->assertInstanceOf(Server::class, $server);
+        $this->assertSame($this->identityProvider, $server->getIdentityProvider());
+        $this->assertSame($this->clientProvider, $server->getClientProvider());
+        $this->assertSame($this->tokenStorage, $server->getTokenStorage());
     }
 
     public function testInstanceImplementsServerInterface()

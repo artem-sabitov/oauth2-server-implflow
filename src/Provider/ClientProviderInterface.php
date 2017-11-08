@@ -11,4 +11,9 @@ interface ClientProviderInterface
      * @throws \InvalidArgumentException
      */
     public function getClientById(string $clientId): ClientInterface;
+
+    /**
+     * @return boolean
+     */
+    public function hasClientById(string $clientId): bool;
 }

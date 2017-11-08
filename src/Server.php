@@ -115,15 +115,17 @@ class Server implements ServerInterface
      */
     protected function createToken()
     {
-        $client = $this->getClientFromProvider();
-        $identity = $this->getIdentityProvider()->getIdentity();
+        $client = $this
+            ->getClientProvider()
+            ->getClientById(
+                $this->getAuthorizationRequest()->getClientId()
+            );
 
-        $accessToken = AccessTokenFactory::create(
-            $identity,
-            $client->getClientId()
-        );
+        $identity = $this
+            ->getIdentityProvider()
+            ->getIdentity();
 
-        return $accessToken;
+        return AccessTokenFactory::create($identity, $client);
     }
 
     /**
@@ -132,26 +134,12 @@ class Server implements ServerInterface
      */
     public function createRedirectUriWithAccessToken(AccessToken $token): UriInterface
     {
-        $query = [$this->options->getAccessTokenQueryKey() => $token->getAccessToken()];
+        $redirectUri = $this->getAuthorizationRequest()->getRedirectUri();
+        $query = http_build_query([
+            $this->options->getAccessTokenQueryKey() => $token->getAccessToken()
+        ]);
 
-        $uri = new Uri($this->getAuthorizationRequest()->getRedirectUri());
-        $uri = $uri->withQuery(http_build_query($query));
-
-        return $uri;
-    }
-
-    /**
-     * @return ClientInterface
-     * @throws ParameterException
-     */
-    protected function getClientFromProvider()
-    {
-        $clientId = $this->getAuthorizationRequest()->getClientId();
-
-        /** @var ClientInterface $client */
-        $client = $this->getClientProvider()->getClientById($clientId);
-
-        return $client;
+        return (new Uri($redirectUri))->withQuery($query);
     }
 
     /**

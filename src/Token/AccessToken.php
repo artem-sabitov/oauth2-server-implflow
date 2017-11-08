@@ -2,24 +2,25 @@
 
 namespace OAuth2\Grant\Implicit\Token;
 
+use OAuth2\Grant\Implicit\ClientInterface;
 use OAuth2\Grant\Implicit\IdentityInterface;
 
 class AccessToken
 {
-    /**
-     * @var IdentityInterface
-     */
-    protected $identity;
-
     /**
      * @var string
      */
     protected $accessToken;
 
     /**
-     * @var string
+     * @var IdentityInterface
      */
-    protected $clientId;
+    protected $identity;
+
+    /**
+     * @var ClientInterface
+     */
+    protected $client;
 
     /**
      * @var int
@@ -27,22 +28,18 @@ class AccessToken
     protected $expires;
 
     /**
-     * @return mixed
+     * AccessToken constructor.
+     * @param IdentityInterface $identity
+     * @param ClientInterface $client
      */
-    public function getIdentity(): IdentityInterface
-    {
-        return $this->identity;
-    }
-
-    /**
-     * @param mixed $identity
-     * @return AccessToken
-     */
-    public function setIdentity(IdentityInterface $identity)
-    {
+    public function __construct(
+        string $accessToken,
+        IdentityInterface $identity,
+        ClientInterface $client
+    ) {
+        $this->accessToken = $accessToken;
         $this->identity = $identity;
-
-        return $this;
+        $this->client = $client;
     }
 
     /**
@@ -54,33 +51,19 @@ class AccessToken
     }
 
     /**
-     * @param string $accessToken
-     * @return AccessToken
+     * @return mixed
      */
-    public function setAccessToken(string $accessToken)
+    public function getIdentity(): IdentityInterface
     {
-        $this->accessToken = $accessToken;
-
-        return $this;
+        return $this->identity;
     }
 
     /**
      * @return string
      */
-    public function getClientId(): string
+    public function getClient(): ClientInterface
     {
-        return $this->clientId;
-    }
-
-    /**
-     * @param string $clientId
-     * @return AccessToken
-     */
-    public function setClientId(string $clientId)
-    {
-        $this->clientId = $clientId;
-
-        return $this;
+        return $this->client;
     }
 
     /**
@@ -89,16 +72,5 @@ class AccessToken
     public function getExpires(): int
     {
         return $this->expires;
-    }
-
-    /**
-     * @param int $expires
-     * @return AccessToken
-     */
-    public function setExpires(int $expires)
-    {
-        $this->expires = $expires;
-
-        return $this;
     }
 }

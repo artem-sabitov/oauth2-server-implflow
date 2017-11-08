@@ -84,9 +84,7 @@ class AuthorizationRequestValidator
      */
     public function validateClientId(string $clientId): bool
     {
-        try {
-            $client = $this->clientProvider->getClientById($clientId);
-        } catch (InvalidArgumentException $e) {
+        if ($this->clientProvider->hasClientById($clientId) === false) {
             $this->messages->addErrorMessage(
                 AuthorizationRequest::CLIENT_ID_KEY,
                 sprintf(
