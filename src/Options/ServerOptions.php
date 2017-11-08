@@ -19,6 +19,11 @@ class ServerOptions extends AbstractOptions
     protected $supportedResponseType = self::DEFAULT_RESPONSE_TYPE;
 
     /**
+     * @var string
+     */
+    protected $accessTokenQueryKey = 'access_token';
+
+    /**
      * @return string
      */
     public function getAuthenticationUri(): string
@@ -50,9 +55,26 @@ class ServerOptions extends AbstractOptions
      */
     public function setSupportedResponseType(string $responseType): ServerOptions
     {
-        $new = clone $this;
-        $new->supportedResponseType = $responseType;
+        $this->supportedResponseType = $responseType;
 
-        return $new;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getAccessTokenQueryKey(): string
+    {
+        return $this->accessTokenQueryKey;
+    }
+
+    /**
+     * @param string $accessTokenQueryKey
+     */
+    public function setAccessTokenQueryKey(string $accessTokenQueryKey)
+    {
+        $this->accessTokenQueryKey = $accessTokenQueryKey;
+
+        return $this;
     }
 }

@@ -132,7 +132,7 @@ class Server implements ServerInterface
      */
     public function createRedirectUriWithAccessToken(AccessToken $token): UriInterface
     {
-        $query = ['access_token' => $token->getAccessToken()];
+        $query = [$this->options->getAccessTokenQueryKey() => $token->getAccessToken()];
 
         $uri = new Uri($this->getAuthorizationRequest()->getRedirectUri());
         $uri = $uri->withQuery(http_build_query($query));
