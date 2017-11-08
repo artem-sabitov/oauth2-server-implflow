@@ -2,12 +2,14 @@
 
 namespace OAuth2\Grant\Implicit\Token;
 
+use DateTime;
 use OAuth2\Grant\Implicit\ClientInterface;
 use OAuth2\Grant\Implicit\IdentityInterface;
 
 class AccessTokenFactory
 {
     const TOKEN_LENGTH = 128;
+    const EXPIRATION_TIME = 60 * 60; // seconds
 
     /**
      * @param IdentityInterface $identity
@@ -19,7 +21,8 @@ class AccessTokenFactory
         return new AccessToken(
             self::generateRandomString(static::TOKEN_LENGTH),
             $identity,
-            $client
+            $client,
+            self::generateExpiresAt()
         );
     }
 
@@ -33,5 +36,10 @@ class AccessTokenFactory
         $string = bin2hex($bytes);
 
         return $string;
+    }
+
+    private static function generateExpiresAt()
+    {
+        return (new DateTime())->getTimestamp() + self::EXPIRATION_TIME ;
     }
 }

@@ -2,7 +2,6 @@
 
 namespace OAuth2\Grant\Implicit\Validator;
 
-use InvalidArgumentException;
 use OAuth2\Grant\Implicit\AuthorizationRequest;
 use OAuth2\Grant\Implicit\Exception\ParameterException;
 use OAuth2\Grant\Implicit\Messages;
@@ -33,11 +32,6 @@ class AuthorizationRequestValidator
     private $supportedResponseType;
 
     /**
-     * @var string
-     */
-    private $supportedRedirectUri;
-
-    /**
      * @var Messages
      */
     private $messages;
@@ -48,13 +42,11 @@ class AuthorizationRequestValidator
      */
     public function __construct(
         ClientProviderInterface $clientProvider,
-        string $supportedResponseType,
-        string $supportedRedirectUri
+        string $supportedResponseType
     ) {
         $this->messages = new Messages();
         $this->clientProvider = $clientProvider;
         $this->supportedResponseType = $supportedResponseType;
-        $this->supportedRedirectUri = $supportedRedirectUri;
     }
 
     /**
@@ -67,7 +59,7 @@ class AuthorizationRequestValidator
         }
 
         $this->validateClientId($request->getClientId());
-        $this->validateRedirectUri($request->getRedirectUri());
+        $this->validateRedirectUri($request->getClientId(), $request->getRedirectUri());
         $this->validateResponseType($request->getResponseType());
     }
 
@@ -85,12 +77,9 @@ class AuthorizationRequestValidator
     public function validateClientId(string $clientId): bool
     {
         if ($this->clientProvider->hasClientById($clientId) === false) {
-            $this->messages->addErrorMessage(
+            $this->addErrorMessage(
                 AuthorizationRequest::CLIENT_ID_KEY,
-                sprintf(
-                    self::$messageTemplates[self::INVALID_PARAMETER],
-                    AuthorizationRequest::CLIENT_ID_KEY
-                )
+                self::INVALID_PARAMETER
             );
 
             return false;
@@ -102,16 +91,21 @@ class AuthorizationRequestValidator
     /**
      * @return bool
      */
-    public function validateRedirectUri(string $redirectUri): bool
+    public function validateRedirectUri(string $clientId, string $redirectUri): bool
     {
-        if ($redirectUri !== $this->supportedRedirectUri) {
-            $this->messages->addErrorMessage(
-                AuthorizationRequest::RESPONSE_TYPE_KEY,
-                sprintf(
-                    self::$messageTemplates[self::INVALID_PARAMETER],
-                    AuthorizationRequest::RESPONSE_TYPE_KEY
-                )
+        // Request without a valid client_id
+        if ($this->validateClientId($clientId) === false) {
+            return false;
+        }
+
+        $client = $this->clientProvider->getClientById($clientId);
+
+        if ($redirectUri !== $client->getRedirectUri()) {
+            $this->addErrorMessage(
+                AuthorizationRequest::REDIRECT_URI_KEY,
+                self::INVALID_PARAMETER
             );
+
             return false;
         }
 
@@ -124,17 +118,30 @@ class AuthorizationRequestValidator
     public function validateResponseType(string $responseType): bool
     {
         if ($responseType !== $this->supportedResponseType) {
-            $this->messages->addErrorMessage(
+            $this->addErrorMessage(
                 AuthorizationRequest::RESPONSE_TYPE_KEY,
-                sprintf(
-                    self::$messageTemplates[self::INVALID_PARAMETER],
-                    AuthorizationRequest::RESPONSE_TYPE_KEY
-                )
+                self::INVALID_PARAMETER
             );
 
             return false;
         }
 
         return true;
+    }
+
+    /**
+     * @param string $key
+     * @param int $errorCode
+     * @return void
+     */
+    protected function addErrorMessage(string $key, int $errorCode): void
+    {
+        if (isset(self::$messageTemplates[$errorCode]) === true) {
+            $message = sprintf(self::$messageTemplates[$errorCode], $key);
+        } else {
+            $message = $key . ' error';
+        }
+
+        $this->messages->addErrorMessage($key, $message);
     }
 }

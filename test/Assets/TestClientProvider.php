@@ -24,8 +24,12 @@ class TestClientProvider implements ClientProviderInterface
         'redirect_uri' => 'http://example.com',
     ];
 
-    public function __construct()
+    public function __construct($clientProperties = [])
     {
+        if (!empty($clientProperties)) {
+            $this->clientProperties = $clientProperties;
+        }
+
         $clientId = $this->clientProperties['identificator'];
         $this->clients[$clientId] = new Client(
             $this->clientProperties['identificator'],

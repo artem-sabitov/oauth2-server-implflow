@@ -252,16 +252,10 @@ class Server implements ServerInterface
     public function getAuthorizationRequestValidator()
     {
         $responseType = $this->options->getSupportedResponseType();
-        $clientId = $this->getAuthorizationRequest()->getClientId();
-        $clientRedirectUri = $this
-            ->getClientProvider()
-            ->getClientById($clientId)
-            ->getRedirectUri();
 
         return new AuthorizationRequestValidator(
             $this->getClientProvider(),
-            $responseType,
-            $clientRedirectUri
+            $responseType
         );
     }
 }

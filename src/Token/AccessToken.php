@@ -35,11 +35,13 @@ class AccessToken
     public function __construct(
         string $accessToken,
         IdentityInterface $identity,
-        ClientInterface $client
+        ClientInterface $client,
+        int $expires
     ) {
         $this->accessToken = $accessToken;
         $this->identity = $identity;
         $this->client = $client;
+        $this->expires = $expires;
     }
 
     /**

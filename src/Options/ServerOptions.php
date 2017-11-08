@@ -6,7 +6,8 @@ use Zend\Stdlib\AbstractOptions;
 
 class ServerOptions extends AbstractOptions
 {
-    const DEFAULT_RESPONSE_TYPE = 'token';
+    const ACCESS_TOKEN_KEY = 'access_token';
+    const RESPONSE_TYPE = 'token';
 
     /**
      * @var string
@@ -16,12 +17,12 @@ class ServerOptions extends AbstractOptions
     /**
      * @var string
      */
-    protected $supportedResponseType = self::DEFAULT_RESPONSE_TYPE;
+    protected $supportedResponseType = self::RESPONSE_TYPE;
 
     /**
      * @var string
      */
-    protected $accessTokenQueryKey = 'access_token';
+    protected $accessTokenQueryKey = self::ACCESS_TOKEN_KEY;
 
     /**
      * @return string
