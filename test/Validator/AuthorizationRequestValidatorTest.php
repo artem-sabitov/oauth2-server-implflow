@@ -67,4 +67,6 @@ class AuthorizationRequestValidatorTest extends TestCase
         $validator = $this->getValidator();
         $this->assertTrue(empty($validator->getMessages()));
     }
+
+//    public function test
 }

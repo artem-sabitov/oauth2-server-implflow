@@ -1,5 +1,5 @@
 {
-  "name": "artem-sabitov/oauth2-server-implflow",
+  "name": "sabitov/oauth2-server-implflow",
   "description": "OAuth 2.0 implicit grant",
   "type": "library",
   "keywords": [
