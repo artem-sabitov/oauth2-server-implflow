@@ -1,5 +1,5 @@
 {
-  "name": "sabitov/oauth2-server-implflow",
+  "name": "sabitov/oauth2-server-implicit-flow",
   "description": "OAuth 2.0 implicit grant",
   "type": "library",
   "keywords": [
