@@ -9,7 +9,7 @@ use OAuth2\Grant\Implicit\Provider\ClientProviderInterface;
 use OAuth2\Grant\Implicit\Provider\IdentityProviderInterface;
 use OAuth2\Grant\Implicit\Storage\TokenStorageInterface;
 use OAuth2\Grant\Implicit\Token\AccessToken;
-use OAuth2\Grant\Implicit\Token\AccessTokenFactory;
+use OAuth2\Grant\Implicit\Token\AccessTokenBuilder;
 use OAuth2\Grant\Implicit\Validator\AuthorizationRequestValidator;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -73,16 +73,17 @@ class Server implements ServerInterface
         }
 
         try {
-            $request = AuthorizationRequestFactory::fromServerRequest($request);
-            $this->validateAuthorizationRequest($request);
-            $this->authorizationRequest = $request;
+            $authorizationRequest = AuthorizationRequestFactory::fromServerRequest($request);
+            $this->validateAuthorizationRequest($authorizationRequest);
 
-            $token = $this->createToken();
-            $this->getTokenStorage()->write($token);
+            $token = $this->createToken($authorizationRequest);
+
             $redirectUri = $this->createRedirectUriWithAccessToken($token);
         } catch (ParameterException $e) {
             return $this->createErrorResponse(400, $e->getMessages());
         }
+
+        $this->getTokenStorage()->write($token);
 
         return new Response\RedirectResponse($redirectUri);
     }
@@ -113,19 +114,19 @@ class Server implements ServerInterface
      * @return Token\AccessToken
      * @throws \InvalidArgumentException
      */
-    protected function createToken()
+    protected function createToken(AuthorizationRequest $request)
     {
-        $client = $this
-            ->getClientProvider()
-            ->getClientById(
-                $this->getAuthorizationRequest()->getClientId()
-            );
-
         $identity = $this
             ->getIdentityProvider()
             ->getIdentity();
 
-        return AccessTokenFactory::create($identity, $client);
+        $client = $this
+            ->getClientProvider()
+            ->getClientById(
+                $request->getClientId()
+            );
+
+        return AccessTokenBuilder::create($identity, $client);
     }
 
     /**
@@ -134,7 +135,7 @@ class Server implements ServerInterface
      */
     public function createRedirectUriWithAccessToken(AccessToken $token): UriInterface
     {
-        $redirectUri = $this->getAuthorizationRequest()->getRedirectUri();
+        $redirectUri = $token->getClient()->getRedirectUri();
         $query = http_build_query([
             $this->options->getAccessTokenQueryKey() => $token->getAccessToken()
         ]);

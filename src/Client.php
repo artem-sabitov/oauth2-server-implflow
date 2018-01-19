@@ -12,7 +12,7 @@ class Client implements ClientInterface
     /**
      * @var string
      */
-    protected $redirectUriList;
+    protected $redirectUri;
 
     /**
      * Client constructor.
@@ -22,7 +22,7 @@ class Client implements ClientInterface
     public function __construct(string $identificator, string $redirectUri)
     {
         $this->identificator = $identificator;
-        $this->redirectUriList = $redirectUri;
+        $this->redirectUri = $redirectUri;
     }
 
     /**
@@ -38,6 +38,6 @@ class Client implements ClientInterface
      */
     public function getRedirectUri(): string
     {
-        return $this->redirectUriList;
+        return $this->redirectUri;
     }
 }
