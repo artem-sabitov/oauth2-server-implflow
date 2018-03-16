@@ -1,8 +1,8 @@
 <?php
 
-namespace OAuth2Test\Grant\Implicit;
+namespace OAuth2Test;
 
-use OAuth2\Grant\Implicit\Messages;
+use OAuth2\Messages;
 use PHPUnit\Framework\TestCase;
 
 class MessagesTest extends TestCase

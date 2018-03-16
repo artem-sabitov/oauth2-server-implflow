@@ -1,12 +1,15 @@
 <?php
 
-namespace OAuth2\Grant\Implicit\Validator;
+declare(strict_types=1);
 
-use OAuth2\Grant\Implicit\AuthorizationRequest;
-use OAuth2\Grant\Implicit\Exception\ParameterException;
-use OAuth2\Grant\Implicit\Messages;
-use OAuth2\Grant\Implicit\Provider\ClientProviderInterface;
+namespace OAuth2\Validator;
+
+use OAuth2\Request\AuthorizationRequest;
+use OAuth2\Exception\ParameterException;
+use OAuth2\Messages;
+use OAuth2\Provider\ClientProviderInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Zend\Stdlib\ArrayUtils;
 
 class AuthorizationRequestValidator
 {
@@ -16,7 +19,7 @@ class AuthorizationRequestValidator
     /**
      * @var string
      */
-    protected static $messageTemplates = [
+    protected $messageTemplates = [
         self::INVALID_PARAMETER => 'Invalid \'%s\' parameter',
         self::MISSING_PARAMETER => 'Required parameter \'%s\' missing',
     ];
@@ -34,19 +37,18 @@ class AuthorizationRequestValidator
     /**
      * @var Messages
      */
-    private $messages;
+    private $errorMessages;
 
     /**
      * AuthorizationRequestValidator constructor.
      * @param string $supportedResponseType
      */
-    public function __construct(
-        ClientProviderInterface $clientProvider,
-        string $supportedResponseType
-    ) {
-        $this->messages = new Messages();
-        $this->clientProvider = $clientProvider;
-        $this->supportedResponseType = $supportedResponseType;
+    public function __construct(array $messageTemplates = null) {
+        if ($messageTemplates !== null) {
+            $this->messageTemplates = ArrayUtils::merge($this->messageTemplates, $messageTemplates);
+        }
+
+        $this->errorMessages = new Messages();
     }
 
     /**

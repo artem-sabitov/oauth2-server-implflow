@@ -1,8 +1,8 @@
 <?php
 
-namespace OAuth2Test\Grant\Implicit\Options;
+namespace OAuth2Test\Options;
 
-use OAuth2\Grant\Implicit\Options\ServerOptions;
+use OAuth2\Options\ServerOptions;
 use PHPUnit\Framework\TestCase;
 
 class ServerOptionsTest extends TestCase

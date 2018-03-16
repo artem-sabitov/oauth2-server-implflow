@@ -1,10 +1,10 @@
 <?php
 
-namespace OAuth2Test\Grant\Implicit;
+namespace OAuth2Test;
 
 use InvalidArgumentException;
-use OAuth2\Grant\Implicit\AuthorizationRequest;
-use OAuth2\Grant\Implicit\Exception\ParameterException;
+use OAuth2\AuthorizationRequest;
+use OAuth2\Exception\ParameterException;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 use Zend\Diactoros\ServerRequest as Request;

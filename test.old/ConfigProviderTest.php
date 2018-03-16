@@ -1,8 +1,8 @@
 <?php
 
-namespace OAuth2Test\Grant\Implicit;
+namespace OAuth2Test;
 
-use OAuth2\Grant\Implicit\ConfigProvider;
+use OAuth2\ConfigProvider;
 use PHPUnit\Framework\TestCase;
 
 class ConfigProviderTest extends TestCase

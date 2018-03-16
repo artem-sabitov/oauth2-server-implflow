@@ -146,8 +146,9 @@ class AuthorizationRequest
     private function validateQueryParameter(string $name, $value): void
     {
         $value = (string) $value;
+        $length = mb_strlen($value);
 
-        if (mb_strlen($value) === 0 || mb_strlen($value) > self::MAX_PARAMETER_LENGTH) {
+        if ($length === 0 || $length > self::MAX_PARAMETER_LENGTH) {
             throw ParameterException::createInvalidParameter($name);
         }
     }

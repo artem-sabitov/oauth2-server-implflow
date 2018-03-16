@@ -1,11 +1,11 @@
 <?php
 
-namespace OAuth2Test\Grant\Implicit\Validator;
+namespace OAuth2Test\Validator;
 
-use OAuth2\Grant\Implicit\ClientInterface;
-use OAuth2\Grant\Implicit\Provider\ClientProviderInterface;
-use OAuth2\Grant\Implicit\Validator\AuthorizationRequestValidator;
-use OAuth2Test\Grant\Implicit\Assets\TestClientProvider;
+use OAuth2\ClientInterface;
+use OAuth2\Provider\ClientProviderInterface;
+use OAuth2\Validator\AuthorizationRequestValidator;
+use OAuth2Test\Assets\TestClientProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 

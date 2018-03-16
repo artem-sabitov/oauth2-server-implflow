@@ -1,14 +1,14 @@
 <?php
 
-namespace OAuth2Test\Grant\Implicit\Factory;
+namespace OAuth2Test\Factory;
 
-use OAuth2\Grant\Implicit\Factory\ServerFactory;
-use OAuth2\Grant\Implicit\Options\ServerOptions;
-use OAuth2\Grant\Implicit\Provider\ClientProviderInterface;
-use OAuth2\Grant\Implicit\Provider\IdentityProviderInterface;
-use OAuth2\Grant\Implicit\Server;
-use OAuth2\Grant\Implicit\ServerInterface;
-use OAuth2\Grant\Implicit\Storage\TokenStorageInterface;
+use OAuth2\Factory\ServerFactory;
+use OAuth2\Options\ServerOptions;
+use OAuth2\Provider\ClientProviderInterface;
+use OAuth2\Provider\IdentityProviderInterface;
+use OAuth2\Server;
+use OAuth2\ServerInterface;
+use OAuth2\Storage\TokenStorageInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
 use ReflectionProperty;

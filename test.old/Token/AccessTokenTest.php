@@ -1,11 +1,11 @@
 <?php
 
-namespace OAuth2Test\Grant\Implicit\Token;
+namespace OAuth2Test\Token;
 
 use DateTime;
-use OAuth2\Grant\Implicit\ClientInterface;
-use OAuth2\Grant\Implicit\IdentityInterface;
-use OAuth2\Grant\Implicit\Token\AccessToken;
+use OAuth2\ClientInterface;
+use OAuth2\IdentityInterface;
+use OAuth2\Token\AccessToken;
 use PHPUnit\Framework\TestCase;
 
 class AccessTokenTest extends TestCase

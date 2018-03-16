@@ -1,9 +1,8 @@
 <?php
 
-namespace OAuth2Test\Grant\Implicit;
+namespace OAuth2Test;
 
-use InvalidArgumentException;
-use OAuth2\Grant\Implicit\Client;
+use OAuth2\Client;
 use PHPUnit\Framework\TestCase;
 
 class ClientTest extends TestCase
