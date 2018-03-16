@@ -1,6 +1,6 @@
 <?php
 
-namespace OAuth2\Grant\Implicit\Exception;
+namespace OAuth2\Exception;
 
 use \InvalidArgumentException;
 
@@ -43,11 +43,9 @@ class ParameterException extends InvalidArgumentException
         ));
     }
 
-    public static function create(array $messages)
+    public static function create(array $messages): ParameterException
     {
-        $e = (new self())->withMessages($messages);
-
-        return $e;
+        return (new ParameterException())->withMessages($messages);
     }
 
     /**
@@ -64,9 +62,8 @@ class ParameterException extends InvalidArgumentException
 
     public function withMessages(array $messages)
     {
-        $new = clone $this;
-        $new->messages = $messages;
+        $this->messages = $messages;
 
-        return $new;
+        return $this;
     }
 }

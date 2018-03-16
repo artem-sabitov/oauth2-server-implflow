@@ -8,7 +8,7 @@ use OAuth2\Provider\ClientProviderInterface;
 use OAuth2\Provider\IdentityProviderInterface;
 use OAuth2\Server;
 use OAuth2\ServerInterface;
-use OAuth2\Storage\TokenStorageInterface;
+use OAuth2\Storage\AccessTokenStorageInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
 use ReflectionProperty;
@@ -31,7 +31,7 @@ class ServerFactoryTest extends TestCase
     protected $clientProvider;
 
     /**
-     * @var TokenStorageInterface
+     * @var AccessTokenStorageInterface
      */
     protected $tokenStorage;
 
@@ -40,7 +40,7 @@ class ServerFactoryTest extends TestCase
         $this->options = $this->createMock(ServerOptions::class);
         $this->identityProvider = $this->createMock(IdentityProviderInterface::class);
         $this->clientProvider = $this->createMock(ClientProviderInterface::class);
-        $this->tokenStorage = $this->createMock(TokenStorageInterface::class);
+        $this->tokenStorage = $this->createMock(AccessTokenStorageInterface::class);
     }
 
     public function getContainer()
@@ -51,7 +51,7 @@ class ServerFactoryTest extends TestCase
                 [ServerOptions::class],
                 [IdentityProviderInterface::class],
                 [ClientProviderInterface::class],
-                [TokenStorageInterface::class]
+                [AccessTokenStorageInterface::class]
             )
             ->willReturnOnConsecutiveCalls(
                 $this->options,

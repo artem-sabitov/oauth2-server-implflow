@@ -1,6 +1,6 @@
 <?php
 
-namespace OAuth2\Grant\Implicit;
+namespace OAuth2;
 
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;

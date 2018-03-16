@@ -1,13 +1,15 @@
 <?php
 
-namespace OAuth2\Grant\Implicit\Options;
+namespace OAuth2\Options;
 
+use OAuth2\GrantType\AbstractGrantType;
 use Zend\Stdlib\AbstractOptions;
+use Zend\Stdlib\ArrayUtils;
 
-class ServerOptions extends AbstractOptions
+class Options extends AbstractOptions
 {
-    const ACCESS_TOKEN_KEY = 'access_token';
-    const RESPONSE_TYPE = 'token';
+    const DEFAULT_ACCESS_TOKEN_KEY = 'access_token';
+    const DEFAULT_REDIRECT_URI_KEY = 'redirect_uri';
 
     /**
      * @var string
@@ -15,67 +17,65 @@ class ServerOptions extends AbstractOptions
     protected $authenticationUri = '';
 
     /**
-     * @var string
+     * @var array
      */
-    protected $supportedResponseType = self::RESPONSE_TYPE;
+    protected $supportedResponseTypes = [];
 
     /**
      * @var string
      */
-    protected $accessTokenQueryKey = self::ACCESS_TOKEN_KEY;
+    protected $accessTokenQueryKey = self::DEFAULT_ACCESS_TOKEN_KEY;
 
     /**
-     * @return string
+     * @var string
      */
+    protected $redirectUriQueryKey = self::DEFAULT_REDIRECT_URI_KEY;
+
     public function getAuthenticationUri(): string
     {
         return $this->authenticationUri;
     }
 
-    /**
-     * @param string $authenticationUri
-     * @return ServerOptions
-     */
-    public function setAuthenticationUri(string $authenticationUri): ServerOptions
+    public function setAuthenticationUri(string $authenticationUri): void
     {
         $this->authenticationUri = $authenticationUri;
-
-        return $this;
     }
 
-    /**
-     * @return string
-     */
-    public function getSupportedResponseType(): string
+    public function getSupportedResponseTypes(): array
     {
         return $this->supportedResponseType;
     }
 
-    /**
-     * @param string $availableResponseType
-     */
-    public function setSupportedResponseType(string $responseType): ServerOptions
+    public function setSupportedResponseTypes(array $responseTypes): void
     {
-        $this->supportedResponseType = $responseType;
-
-        return $this;
+        $this->supportedResponseType = $responseTypes;
     }
 
-    /**
-     * @return string
-     */
+    public function addSupportedResponseType(AbstractGrantType $type): void
+    {
+        $className = get_class($type);
+        if (! ArrayUtils::inArray($className, $this->supportedResponseTypes)) {
+            $this->supportedResponseTypes[$type->getTypeAsString()] = $className;
+        }
+    }
+
     public function getAccessTokenQueryKey(): string
     {
         return $this->accessTokenQueryKey;
     }
 
-    /**
-     * @param string $accessTokenQueryKey
-     */
-    public function setAccessTokenQueryKey(string $accessTokenQueryKey)
+    public function setAccessTokenQueryKey(string $accessTokenQueryKey): void
     {
         $this->accessTokenQueryKey = $accessTokenQueryKey;
+    }
 
-        return $this;
+    public function getRedirectUriQueryKey(): string
+    {
+        return $this->redirectUriQueryKey;
+    }
+
+    public function setRedirectUriQueryKey(string $redirectUriQueryKey): void
+    {
+        $this->redirectUriQueryKey = $redirectUriQueryKey;
     }
 }

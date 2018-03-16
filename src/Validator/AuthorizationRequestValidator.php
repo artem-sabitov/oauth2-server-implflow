@@ -20,19 +20,9 @@ class AuthorizationRequestValidator
      * @var string
      */
     protected $messageTemplates = [
-        self::INVALID_PARAMETER => 'Invalid \'%s\' parameter',
-        self::MISSING_PARAMETER => 'Required parameter \'%s\' missing',
+        self::INVALID_PARAMETER => 'Parameter \'%s\' has invalid value \'%s\'',
+        self::MISSING_PARAMETER => 'Required parameter \'%s\' is missing',
     ];
-
-    /**
-     * @var ClientProviderInterface
-     */
-    private $clientProvider;
-
-    /**
-     * @var string
-     */
-    private $supportedResponseType;
 
     /**
      * @var Messages
@@ -51,38 +41,40 @@ class AuthorizationRequestValidator
         $this->errorMessages = new Messages();
     }
 
+    public function hasErrorMessages(): bool
+    {
+        return empty($this->errorMessages->toArray()) === false;
+    }
+
+    public function getErrorMessages(): array
+    {
+        return $this->errorMessages->toArray();
+    }
+
     /**
      * @throws ParameterException
      */
-    public function validate($request)
+    public function validate(AuthorizationRequest $request): void
     {
-        if ($request instanceof ServerRequestInterface) {
-            $request = new AuthorizationRequest($request);
+        if ($this->isValid($request) === false) {
+            throw (new ParameterException())->withMessages($this->getErrorMessages());
         }
-
-        $this->validateClientId($request->getClientId());
-        $this->validateRedirectUri($request->getClientId(), $request->getRedirectUri());
-        $this->validateResponseType($request->getResponseType());
     }
 
-    /**
-     * @return array
-     */
-    public function getMessages()
+    public function isValid(AuthorizationRequest $request): bool
     {
-        return $this->messages->toArray();
+        $isValidClientId = $this->validateClientId($request);
+        $isValidRedirectUri = $this->validateRedirectUri($request);
+        $isValidResponseType = $this->validateResponseType($request);
+
+        return $isValidClientId && $isValidRedirectUri && $isValidResponseType;
     }
 
-    /**
-     * @return bool
-     */
-    public function validateClientId(string $clientId): bool
+    public function validateClientId(AuthorizationRequest $request): bool
     {
-        if ($this->clientProvider->hasClientById($clientId) === false) {
-            $this->addErrorMessage(
-                AuthorizationRequest::CLIENT_ID_KEY,
-                self::INVALID_PARAMETER
-            );
+        if ($request->getClientId() === null) {
+            $key = AuthorizationRequest::CLIENT_ID_KEY;
+            $this->addErrorMessage($key, $this->buildMissingParameterMessage($key));
 
             return false;
         }
@@ -90,23 +82,11 @@ class AuthorizationRequestValidator
         return true;
     }
 
-    /**
-     * @return bool
-     */
-    public function validateRedirectUri(string $clientId, string $redirectUri): bool
+    public function validateRedirectUri(AuthorizationRequest $request): bool
     {
-        // Request without a valid client_id
-        if ($this->validateClientId($clientId) === false) {
-            return false;
-        }
-
-        $client = $this->clientProvider->getClientById($clientId);
-
-        if ($redirectUri !== $client->getRedirectUri()) {
-            $this->addErrorMessage(
-                AuthorizationRequest::REDIRECT_URI_KEY,
-                self::INVALID_PARAMETER
-            );
+        if ($request->getRedirectUri() === null) {
+            $key = AuthorizationRequest::REDIRECT_URI_KEY;
+            $this->addErrorMessage($key, $this->buildMissingParameterMessage($key));
 
             return false;
         }
@@ -114,16 +94,11 @@ class AuthorizationRequestValidator
         return true;
     }
 
-    /**
-     * @return bool
-     */
-    public function validateResponseType(string $responseType): bool
+    public function validateResponseType(AuthorizationRequest $request): bool
     {
-        if ($responseType !== $this->supportedResponseType) {
-            $this->addErrorMessage(
-                AuthorizationRequest::RESPONSE_TYPE_KEY,
-                self::INVALID_PARAMETER
-            );
+        if ($request->getResponseType() === null) {
+            $key = AuthorizationRequest::RESPONSE_TYPE_KEY;
+            $this->addErrorMessage($key, $this->buildMissingParameterMessage($key));
 
             return false;
         }
@@ -131,19 +106,13 @@ class AuthorizationRequestValidator
         return true;
     }
 
-    /**
-     * @param string $key
-     * @param int $errorCode
-     * @return void
-     */
-    protected function addErrorMessage(string $key, int $errorCode): void
+    protected function addErrorMessage(string $key, string $message): void
     {
-        if (isset(self::$messageTemplates[$errorCode]) === true) {
-            $message = sprintf(self::$messageTemplates[$errorCode], $key);
-        } else {
-            $message = $key . ' error';
-        }
+        $this->errorMessages->addErrorMessage($key, $message);
+    }
 
-        $this->messages->addErrorMessage($key, $message);
+    protected function buildMissingParameterMessage($parameter): string
+    {
+        return sprintf($this->messageTemplates[self::MISSING_PARAMETER], $parameter);
     }
 }

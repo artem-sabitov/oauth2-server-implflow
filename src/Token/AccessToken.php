@@ -1,9 +1,9 @@
 <?php
 
-namespace OAuth2\Grant\Implicit\Token;
+namespace OAuth2\Token;
 
-use OAuth2\Grant\Implicit\ClientInterface;
-use OAuth2\Grant\Implicit\IdentityInterface;
+use OAuth2\ClientInterface;
+use OAuth2\IdentityInterface;
 
 class AccessToken
 {
@@ -47,7 +47,7 @@ class AccessToken
     /**
      * @return string
      */
-    public function getAccessToken(): string
+    public function getValue(): string
     {
         return $this->accessToken;
     }

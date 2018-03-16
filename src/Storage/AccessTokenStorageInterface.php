@@ -1,10 +1,10 @@
 <?php
 
-namespace OAuth2\Grant\Implicit\Storage;
+namespace OAuth2\Storage;
 
-use OAuth2\Grant\Implicit\Token\AccessToken;
+use OAuth2\Token\AccessToken;
 
-interface TokenStorageInterface
+interface AccessTokenStorageInterface
 {
     /**
      * @param AccessToken $accessToken

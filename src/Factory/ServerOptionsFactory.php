@@ -1,9 +1,9 @@
 <?php
 
-namespace OAuth2\Grant\Implicit\Factory;
+namespace OAuth2\Factory;
 
-use OAuth2\Grant\Implicit\ConfigProvider;
-use OAuth2\Grant\Implicit\Options\ServerOptions;
+use OAuth2\ConfigProvider;
+use OAuth2\Options\ServerOptions;
 use Psr\Container\ContainerInterface;
 
 class ServerOptionsFactory

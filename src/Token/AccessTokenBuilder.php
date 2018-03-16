@@ -1,11 +1,10 @@
 <?php
 
-namespace OAuth2\Grant\Implicit\Token;
+namespace OAuth2\Token;
 
 use DateTime;
-use OAuth2\Grant\Implicit\ClientInterface;
-use OAuth2\Grant\Implicit\IdentityInterface;
-use Zend\Crypt\Password\Bcrypt;
+use OAuth2\ClientInterface;
+use OAuth2\IdentityInterface;
 use Zend\Json\Json;
 
 class AccessTokenBuilder

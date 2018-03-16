@@ -65,7 +65,7 @@ class AuthorizationRequestValidatorTest extends TestCase
     public function testReturnEmptyArrayOfMessagesByDefault()
     {
         $validator = $this->getValidator();
-        $this->assertTrue(empty($validator->getMessages()));
+        $this->assertTrue(empty($validator->getErrorMessages()));
     }
 
 //    public function test

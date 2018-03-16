@@ -1,8 +1,8 @@
 <?php
 
-namespace OAuth2\Grant\Implicit\Provider;
+namespace OAuth2\Provider;
 
-use OAuth2\Grant\Implicit\ClientInterface;
+use OAuth2\ClientInterface;
 
 interface ClientProviderInterface
 {

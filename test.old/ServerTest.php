@@ -9,7 +9,7 @@ use OAuth2\Provider\ClientProviderInterface;
 use OAuth2\Provider\IdentityProviderInterface;
 use OAuth2\Server;
 use OAuth2\ServerInterface;
-use OAuth2\Storage\TokenStorageInterface;
+use OAuth2\Storage\AccessTokenStorageInterface;
 use OAuth2Test\Assets\TestClientProvider;
 use OAuth2Test\Assets\TestIdentityProviderWithoutIdentity;
 use OAuth2Test\Assets\TestSuccessIdentityProvider;
@@ -35,7 +35,7 @@ class ServerTest extends TestCase
     private $clientProvider;
 
     /**
-     * @var TokenStorageInterface
+     * @var AccessTokenStorageInterface
      */
     private $tokenStorage;
 
@@ -44,7 +44,7 @@ class ServerTest extends TestCase
         $this->serverOptions = new ServerOptions();
         $this->identityProvider = new TestSuccessIdentityProvider();
         $this->clientProvider = new TestClientProvider();
-        $this->tokenStorage = $this->createMock(TokenStorageInterface::class);
+        $this->tokenStorage = $this->createMock(AccessTokenStorageInterface::class);
     }
 
     public function getServer()

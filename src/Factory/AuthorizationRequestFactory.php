@@ -1,9 +1,9 @@
 <?php
 
-namespace OAuth2\Grant\Implicit\Factory;
+namespace OAuth2\Factory;
 
 use InvalidArgumentException;
-use OAuth2\Grant\Implicit\AuthorizationRequest;
+use OAuth2\Request\AuthorizationRequest;
 use Psr\Http\Message\ServerRequestInterface;
 use Zend\Diactoros\ServerRequestFactory;
 
@@ -25,7 +25,7 @@ class AuthorizationRequestFactory
      * @return AuthorizationRequest
      * @throws InvalidArgumentException
      */
-    public static function fromServerRequest(ServerRequestInterface $serverRequest)
+    public static function fromServerRequest(ServerRequestInterface $serverRequest): AuthorizationRequest
     {
         return new AuthorizationRequest($serverRequest);
     }

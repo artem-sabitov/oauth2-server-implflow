@@ -1,26 +1,23 @@
 <?php
 
-namespace OAuth2\Grant\Implicit;
+namespace OAuth2;
 
-use OAuth2\Grant\Implicit\Exception\ParameterException;
-use OAuth2\Grant\Implicit\Factory\AuthorizationRequestFactory;
-use OAuth2\Grant\Implicit\Options\ServerOptions;
-use OAuth2\Grant\Implicit\Provider\ClientProviderInterface;
-use OAuth2\Grant\Implicit\Provider\IdentityProviderInterface;
-use OAuth2\Grant\Implicit\Storage\TokenStorageInterface;
-use OAuth2\Grant\Implicit\Token\AccessToken;
-use OAuth2\Grant\Implicit\Token\AccessTokenBuilder;
-use OAuth2\Grant\Implicit\Validator\AuthorizationRequestValidator;
+use OAuth2\Exception\ParameterException;
+use OAuth2\Factory\AuthorizationRequestFactory;
+use OAuth2\Handler\AbstractAuthorizationHandler;
+use OAuth2\Options\Options;
+use OAuth2\Provider\ClientProviderInterface;
+use OAuth2\Provider\IdentityProviderInterface;
+use OAuth2\Validator\AuthorizationRequestValidator;
+use OAuth2\Request\AuthorizationRequest;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\UriInterface;
 use Zend\Diactoros\Response;
-use Zend\Diactoros\Uri;
 
 class Server implements ServerInterface
 {
     /**
-     * ServerOptions
+     * Options
      */
     protected $options;
 
@@ -40,24 +37,24 @@ class Server implements ServerInterface
     protected $clientProvider;
 
     /**
-     * @var TokenStorageInterface
+     * @var AbstractAuthorizationHandler
      */
-    protected $tokenStorage;
+    protected $authorizationHandler;
 
     /**
      * Server constructor.
      * @param ServerRequestInterface $request
      */
     public function __construct(
-        ServerOptions $serverOptions,
+        Options $serverOptions,
         IdentityProviderInterface $identityProvider,
         ClientProviderInterface $clientProvider,
-        TokenStorageInterface $tokenStorage
+        AbstractAuthorizationHandler $authorizationHandler
     ) {
         $this->options = $serverOptions;
         $this->identityProvider = $identityProvider;
         $this->clientProvider = $clientProvider;
-        $this->tokenStorage = $tokenStorage;
+        $this->authorizationHandler = $authorizationHandler;
     }
 
     /**
@@ -72,20 +69,17 @@ class Server implements ServerInterface
             );
         }
 
+        $this->authorizationRequest = $this->createAuthorizationRequest($request);
+
         try {
-            $authorizationRequest = AuthorizationRequestFactory::fromServerRequest($request);
-            $this->validateAuthorizationRequest($authorizationRequest);
-
-            $token = $this->createToken($authorizationRequest);
-
-            $redirectUri = $this->createRedirectUriWithAccessToken($token);
+            $this->validateAuthorizationRequest($this->authorizationRequest);
         } catch (ParameterException $e) {
             return $this->createErrorResponse(400, $e->getMessages());
         }
 
-        $this->getTokenStorage()->write($token);
+        $handler = $this->handleAuthorizationRequest($this->authorizationRequest);
 
-        return new Response\RedirectResponse($redirectUri);
+        return $this->createResponse($handler->getResponseData());
     }
 
     /**
@@ -96,8 +90,12 @@ class Server implements ServerInterface
         return $this->getIdentityProvider()->hasIdentity();
     }
 
+    public function createAuthorizationRequest(ServerRequestInterface $request): AuthorizationRequest
+    {
+        return AuthorizationRequestFactory::fromServerRequest($request);
+    }
+
     /**
-     * @param AuthorizationRequest $request
      * @throw ParameterException
      */
     public function validateAuthorizationRequest(AuthorizationRequest $request): void
@@ -105,42 +103,29 @@ class Server implements ServerInterface
         $validator = $this->getAuthorizationRequestValidator();
 
         if ($validator->validate($request) === false) {
-            $messages = $validator->getMessages();
+            $messages = $validator->getErrorMessages();
             throw ParameterException::create($messages);
         }
     }
 
     /**
-     * @return Token\AccessToken
-     * @throws \InvalidArgumentException
+     * @throws ParameterException
      */
-    protected function createToken(AuthorizationRequest $request)
+    public function handleAuthorizationRequest(AuthorizationRequest $request): AbstractAuthorizationHandler
     {
-        $identity = $this
-            ->getIdentityProvider()
-            ->getIdentity();
-
-        $client = $this
-            ->getClientProvider()
-            ->getClientById(
-                $request->getClientId()
-            );
-
-        return AccessTokenBuilder::create($identity, $client);
+        return $this->authorizationHandler->handle($request);
     }
 
-    /**
-     * @param array $query
-     * @return UriInterface
-     */
-    public function createRedirectUriWithAccessToken(AccessToken $token): UriInterface
+    public function createResponse(array $data): ResponseInterface
     {
-        $redirectUri = $token->getClient()->getRedirectUri();
-        $query = http_build_query([
-            $this->options->getAccessTokenQueryKey() => $token->getAccessToken()
-        ]);
+        if (isset($data['headers']) === true) {
+            $headers = $data['headers'];
+            if ($headers['Location']) {
+                return new Response\RedirectResponse($headers['Location']);
+            }
+        }
 
-        return (new Uri($redirectUri))->withQuery($query);
+        var_dump($data); die;
     }
 
     /**
@@ -150,7 +135,7 @@ class Server implements ServerInterface
     {
         $body = [
             'code' => $code,
-            'message' => $message,
+            'errors' => $message,
         ];
 
         $response = new Response\JsonResponse($body);
@@ -202,26 +187,6 @@ class Server implements ServerInterface
     }
 
     /**
-     * @return TokenStorageInterface
-     */
-    public function getTokenStorage()
-    {
-        return $this->tokenStorage;
-    }
-
-    /**
-     * Method returning a new immutable object with new value.
-     * @param TokenStorageInterface $tokenStorage
-     */
-    public function setTokenStorage($tokenStorage)
-    {
-        $server = clone $this;
-        $server->tokenStorage = $tokenStorage;
-
-        return $server;
-    }
-
-    /**
      * @return AuthorizationRequest
      */
     public function getAuthorizationRequest()
@@ -252,11 +217,6 @@ class Server implements ServerInterface
      */
     public function getAuthorizationRequestValidator()
     {
-        $responseType = $this->options->getSupportedResponseType();
-
-        return new AuthorizationRequestValidator(
-            $this->getClientProvider(),
-            $responseType
-        );
+        return new AuthorizationRequestValidator();
     }
 }

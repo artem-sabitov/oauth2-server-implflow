@@ -2,3 +2,5 @@ doc/html/
 vendor/
 phpunit.xml
 .idea
+clover.xml
+coverage.txt

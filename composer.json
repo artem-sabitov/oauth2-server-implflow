@@ -14,6 +14,7 @@
     "php": "^7.1",
     "psr/container": "^1.0",
     "psr/http-message": "^1.0.1",
+    "zendframework/zend-crypt": "^3.2",
     "zendframework/zend-diactoros": "^1.6",
     "zendframework/zend-json": "^2.5",
     "zendframework/zend-stdlib": "^3.0"
@@ -28,12 +29,12 @@
   },
   "autoload": {
     "psr-4": {
-      "OAuth2\\Grant\\Implicit\\": "src/"
+      "OAuth2\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "OAuth2Test\\Grant\\Implicit\\": "test/"
+      "OAuth2Test\\": "test/"
     }
   },
   "scripts": {
@@ -45,6 +46,7 @@
     "cs-check": "phpcs",
     "cs-fix": "phpcbf",
     "test": "phpunit --colors=always",
-    "test-coverage": "phpunit --coverage-clover clover.xml"
+    "test-coverage": "phpunit --coverage-clover clover.xml",
+    "test-coverage-text": "phpunit --coverage-text=coverage.txt"
   }
 }

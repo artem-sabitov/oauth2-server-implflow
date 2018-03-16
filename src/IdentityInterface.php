@@ -1,6 +1,6 @@
 <?php
 
-namespace OAuth2\Grant\Implicit;
+namespace OAuth2;
 
 interface IdentityInterface
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace OAuth2\Grant\Implicit\Exception;
+namespace OAuth2\Exception;
 
 use \RuntimeException;
 
