@@ -4,10 +4,11 @@ namespace OAuth2\Token;
 
 use DateTime;
 use OAuth2\ClientInterface;
+use OAuth2\Exception\RuntimeException;
 use OAuth2\IdentityInterface;
 use Zend\Json\Json;
 
-class AccessTokenBuilder
+abstract class TokenGenerator
 {
     const STATE_LENGTH = 12;
     const EXPIRATION_TIME = 60 * 60; // seconds
@@ -17,15 +18,19 @@ class AccessTokenBuilder
      * @param string $clientId
      * @return AccessToken
      */
-    public static function create(IdentityInterface $identity, ClientInterface $client): AccessToken
-    {
-        $instance = new self();
-
-        return new AccessToken(
-            $instance->generate($identity, $client),
+    public static function generate(
+        string $tokenClassName,
+        IdentityInterface $identity,
+        ClientInterface $client
+    ): AbstractExpiresToken {
+        if (! class_exists($tokenClassName)) {
+            throw new RuntimeException("Can not generate token of type {$tokenClassName}");
+        }
+        return new $tokenClassName(
+            self::generatePayload($identity, $client),
             $identity,
             $client,
-            $instance->generateExpiresAt()
+            self::generateExpiresAt()
         );
     }
 
@@ -34,23 +39,23 @@ class AccessTokenBuilder
      * @param ClientInterface $client
      * @return string
      */
-    protected function generate(IdentityInterface $identity, ClientInterface $client): string
+    protected static function generatePayload(IdentityInterface $identity, ClientInterface $client): string
     {
         $payload = [
             'id' => $identity->getIdentityId(),
             'client_id' => $client->getClientId(),
-            'expires' => $this->generateExpiresAt(),
-            'state' => $this->generateState(),
+            'expires' => self::generateExpiresAt(),
+            'state' => self::generateState(),
         ];
 
-        return $this->base64UrlEncode(Json::encode($payload));
+        return self::base64UrlEncode(Json::encode($payload));
     }
 
     /**
      * @param $value
      * @return bool|string
      */
-    protected function base64UrlEncode($value): string
+    protected static function base64UrlEncode($value): string
     {
         return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
     }
@@ -59,7 +64,7 @@ class AccessTokenBuilder
      * @param $value
      * @return bool|string
      */
-    protected function base64UrlDecode($value): string
+    protected static function base64UrlDecode($value): string
     {
         return base64_decode(str_replace(['-', '_'], ['+', '/'], $value));
     }
@@ -67,7 +72,7 @@ class AccessTokenBuilder
     /**
      * @return string
      */
-    protected function generateExpiresAt(): string
+    protected static function generateExpiresAt(): string
     {
         return (new DateTime())->getTimestamp() + self::EXPIRATION_TIME ;
     }
@@ -75,7 +80,7 @@ class AccessTokenBuilder
     /**
      * @return string
      */
-    protected function generateState(): string
+    protected static function generateState(): string
     {
         $bytes = random_bytes(self::STATE_LENGTH);
 

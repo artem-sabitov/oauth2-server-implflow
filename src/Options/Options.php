@@ -22,6 +22,11 @@ class Options extends AbstractOptions
     protected $supportedResponseTypes = [];
 
     /**
+     * @var
+     */
+    protected $availableResponseType = [];
+
+    /**
      * @var string
      */
     protected $accessTokenQueryKey = self::DEFAULT_ACCESS_TOKEN_KEY;
@@ -30,6 +35,11 @@ class Options extends AbstractOptions
      * @var string
      */
     protected $redirectUriQueryKey = self::DEFAULT_REDIRECT_URI_KEY;
+
+    /**
+     * @var
+     */
+    protected $authorizationHandlerMap = [];
 
     public function getAuthenticationUri(): string
     {
@@ -51,12 +61,24 @@ class Options extends AbstractOptions
         $this->supportedResponseType = $responseTypes;
     }
 
+
+
     public function addSupportedResponseType(AbstractGrantType $type): void
     {
         $className = get_class($type);
         if (! ArrayUtils::inArray($className, $this->supportedResponseTypes)) {
             $this->supportedResponseTypes[$type->getTypeAsString()] = $className;
         }
+    }
+
+    public function getAvailableResponseTypes(): array
+    {
+        return $this->availableResponseType;
+    }
+
+    public function setAvailableResponseTypes(array $availableResponseTypes): void
+    {
+        $this->availableResponseType = $availableResponseTypes;
     }
 
     public function getAccessTokenQueryKey(): string
@@ -77,5 +99,15 @@ class Options extends AbstractOptions
     public function setRedirectUriQueryKey(string $redirectUriQueryKey): void
     {
         $this->redirectUriQueryKey = $redirectUriQueryKey;
+    }
+
+    public function getAuthorizationHandlerMap(): array
+    {
+        return $this->authorizationHandlerMap;
+    }
+
+    public function setAuthorizationHandlerMap(array $authorizationHandlerMap): void
+    {
+        $this->authorizationHandlerMap = $authorizationHandlerMap;
     }
 }

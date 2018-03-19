@@ -3,16 +3,19 @@
 namespace OAuth2;
 
 use OAuth2\Exception\ParameterException;
+use OAuth2\Exception\RuntimeException;
 use OAuth2\Factory\AuthorizationRequestFactory;
 use OAuth2\Handler\AbstractAuthorizationHandler;
 use OAuth2\Options\Options;
 use OAuth2\Provider\ClientProviderInterface;
 use OAuth2\Provider\IdentityProviderInterface;
+use OAuth2\Storage\AccessTokenStorageInterface;
 use OAuth2\Validator\AuthorizationRequestValidator;
 use OAuth2\Request\AuthorizationRequest;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Zend\Diactoros\Response;
+use Zend\Stdlib\ArrayUtils;
 
 class Server implements ServerInterface
 {
@@ -37,6 +40,11 @@ class Server implements ServerInterface
     protected $clientProvider;
 
     /**
+     * @var AccessTokenStorageInterface
+     */
+    protected $accessTokenStorage;
+
+    /**
      * @var AbstractAuthorizationHandler
      */
     protected $authorizationHandler;
@@ -49,12 +57,12 @@ class Server implements ServerInterface
         Options $serverOptions,
         IdentityProviderInterface $identityProvider,
         ClientProviderInterface $clientProvider,
-        AbstractAuthorizationHandler $authorizationHandler
+        AccessTokenStorageInterface $accessTokenStorage
     ) {
         $this->options = $serverOptions;
         $this->identityProvider = $identityProvider;
         $this->clientProvider = $clientProvider;
-        $this->authorizationHandler = $authorizationHandler;
+        $this->accessTokenStorage = $accessTokenStorage;
     }
 
     /**
@@ -73,11 +81,10 @@ class Server implements ServerInterface
 
         try {
             $this->validateAuthorizationRequest($this->authorizationRequest);
+            $handler = $this->handleAuthorizationRequest($this->authorizationRequest);
         } catch (ParameterException $e) {
             return $this->createErrorResponse(400, $e->getMessages());
         }
-
-        $handler = $this->handleAuthorizationRequest($this->authorizationRequest);
 
         return $this->createResponse($handler->getResponseData());
     }
@@ -113,7 +120,52 @@ class Server implements ServerInterface
      */
     public function handleAuthorizationRequest(AuthorizationRequest $request): AbstractAuthorizationHandler
     {
-        return $this->authorizationHandler->handle($request);
+        $availableResponseType = $this->options->getAvailableResponseTypes();
+
+        if (! ArrayUtils::inArray($request->getResponseType(), $availableResponseType)) {
+            throw (new ParameterException())->withMessages([
+                AuthorizationRequest::RESPONSE_TYPE_KEY => 'Unsupported response type'
+            ]);
+        }
+
+        $handlers = $this->options->getAuthorizationHandlerMap();
+
+        if (count($handlers) === 0) {
+            throw new RuntimeException(
+                "Server does not support any type of oauth2 authorization. \n" .
+                "Add to your oauth2 server config: \n\n" .
+                "'authorization_handler_map' => [ \n" .
+                "    'token' => \OAuth2\Handler\ImplicitFlowAuthorizationHandler::class \n" .
+                "] \n"
+            );
+        }
+
+        /**
+         * @var string $handledResponseType
+         * @var AbstractAuthorizationHandler $className
+         */
+        foreach ($handlers as $handledResponseType => $className) {
+            if ($handledResponseType === $request->getResponseType()) {
+                /** @var AbstractAuthorizationHandler $handler */
+                $handler = new $className(
+                    $this->options,
+                    $this->identityProvider,
+                    $this->clientProvider,
+                    $this->accessTokenStorage
+                );
+                try {
+                    return $handler->handle($request);
+                } catch (RuntimeException $e) {
+                    var_dump($e->getMessage());
+                    die;
+                    throw new ParameterException(
+                        'Server encountered an unexpected error while trying to process the request.'
+                    );
+                }
+            }
+        }
+
+        throw new ParameterException('Unsupported authorization request.');
     }
 
     public function createResponse(array $data): ResponseInterface
@@ -125,7 +177,8 @@ class Server implements ServerInterface
             }
         }
 
-        var_dump($data); die;
+        var_dump($data);
+        die;
     }
 
     /**

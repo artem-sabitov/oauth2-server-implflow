@@ -1,18 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace OAuth2\Handler;
 
 use OAuth2\Exception\ParameterException;
 use OAuth2\Request\AuthorizationRequest;
 use OAuth2\Token\AccessToken;
-use OAuth2\Token\AccessTokenBuilder;
+use OAuth2\Token\TokenGenerator;
 use Psr\Http\Message\UriInterface;
 use Zend\Diactoros\Uri;
 
-class ImplicitFlowAuthorizationHandler extends AbstractAuthorizationHandler
+class ImplicitGrant extends AbstractAuthorizationHandler
 {
-    protected const HEADER_LOCATION = 'Location';
-
     /**
      * @var AccessToken
      */
@@ -51,7 +51,8 @@ class ImplicitFlowAuthorizationHandler extends AbstractAuthorizationHandler
 
     protected function generateAccessToken(): AccessToken
     {
-        $this->accessToken = AccessTokenBuilder::create(
+        $this->accessToken = TokenGenerator::generate(
+            AccessToken::class,
             $this->getIdentity(),
             $this->getClientById($this->request->getClientId())
         );
@@ -61,7 +62,7 @@ class ImplicitFlowAuthorizationHandler extends AbstractAuthorizationHandler
 
     protected function generateRedirectUri(): UriInterface
     {
-        if ($this->hasGeneratedAccessToken()) {
+        if (! $this->hasGeneratedAccessToken()) {
             throw new ParameterException();
         }
 
@@ -73,8 +74,8 @@ class ImplicitFlowAuthorizationHandler extends AbstractAuthorizationHandler
         return (new Uri($redirectUri))->withQuery($query);
     }
 
-    public function hasGeneratedAccessToken(): bool
+    protected function hasGeneratedAccessToken(): bool
     {
-        return $this->accessToken === null;
+        return $this->accessToken instanceof AccessToken;
     }
 }

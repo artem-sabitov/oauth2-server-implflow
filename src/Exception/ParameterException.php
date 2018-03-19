@@ -2,9 +2,7 @@
 
 namespace OAuth2\Exception;
 
-use \InvalidArgumentException;
-
-class ParameterException extends InvalidArgumentException
+class ParameterException extends \InvalidArgumentException
 {
     const INVALID_PARAMETER = 1;
     const MISSING_PARAMETER = 2;

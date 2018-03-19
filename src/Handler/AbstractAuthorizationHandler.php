@@ -14,6 +14,9 @@ use Psr\Http\Message\UriInterface;
 
 abstract class AbstractAuthorizationHandler
 {
+    public const AUTHORIZATION_GRANT = '';
+    protected const HEADER_LOCATION = 'Location';
+
     /**
      * @var Options
      */

@@ -7,8 +7,6 @@ namespace OAuth2\Validator;
 use OAuth2\Request\AuthorizationRequest;
 use OAuth2\Exception\ParameterException;
 use OAuth2\Messages;
-use OAuth2\Provider\ClientProviderInterface;
-use Psr\Http\Message\ServerRequestInterface;
 use Zend\Stdlib\ArrayUtils;
 
 class AuthorizationRequestValidator
@@ -33,7 +31,8 @@ class AuthorizationRequestValidator
      * AuthorizationRequestValidator constructor.
      * @param string $supportedResponseType
      */
-    public function __construct(array $messageTemplates = null) {
+    public function __construct(array $messageTemplates = null)
+    {
         if ($messageTemplates !== null) {
             $this->messageTemplates = ArrayUtils::merge($this->messageTemplates, $messageTemplates);
         }
@@ -72,7 +71,7 @@ class AuthorizationRequestValidator
 
     public function validateClientId(AuthorizationRequest $request): bool
     {
-        if ($request->getClientId() === null) {
+        if ($request->getClientId() === '') {
             $key = AuthorizationRequest::CLIENT_ID_KEY;
             $this->addErrorMessage($key, $this->buildMissingParameterMessage($key));
 
@@ -84,7 +83,7 @@ class AuthorizationRequestValidator
 
     public function validateRedirectUri(AuthorizationRequest $request): bool
     {
-        if ($request->getRedirectUri() === null) {
+        if ($request->getRedirectUri() === '') {
             $key = AuthorizationRequest::REDIRECT_URI_KEY;
             $this->addErrorMessage($key, $this->buildMissingParameterMessage($key));
 
@@ -96,7 +95,7 @@ class AuthorizationRequestValidator
 
     public function validateResponseType(AuthorizationRequest $request): bool
     {
-        if ($request->getResponseType() === null) {
+        if ($request->getResponseType() === '') {
             $key = AuthorizationRequest::RESPONSE_TYPE_KEY;
             $this->addErrorMessage($key, $this->buildMissingParameterMessage($key));
 

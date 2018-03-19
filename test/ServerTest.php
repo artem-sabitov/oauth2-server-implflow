@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace OAuth2Test;
 
+use OAuth2\ConfigProvider;
 use OAuth2\Handler\AbstractAuthorizationHandler;
-use OAuth2\Handler\ImplicitFlowAuthorizationHandler;
+use OAuth2\Handler\ImplicitGrant;
 use OAuth2\Options\Options;
 use OAuth2\Request\AuthorizationRequest;
 use OAuth2\ClientInterface;
@@ -46,17 +47,19 @@ class ServerTest extends TestCase
     private $accessTokenStorage;
 
     /**
-     * @var ImplicitFlowAuthorizationHandler
+     * @var ImplicitGrant
      */
     private $authorizationHandler;
 
     protected function setUp()
     {
-        $this->serverOptions = new Options();
+        $config = new ConfigProvider();
+
+        $this->serverOptions = new Options($config());
         $this->identityProvider = new TestSuccessIdentityProvider();
         $this->clientProvider = new TestClientProvider();
         $this->accessTokenStorage = $this->createMock(AccessTokenStorageInterface::class);
-        $this->authorizationHandler = new ImplicitFlowAuthorizationHandler(
+        $this->authorizationHandler = new ImplicitGrant(
             $this->serverOptions,
             $this->identityProvider,
             $this->clientProvider,
@@ -70,7 +73,7 @@ class ServerTest extends TestCase
             $this->serverOptions,
             $this->identityProvider,
             $this->clientProvider,
-            $this->authorizationHandler
+            $this->accessTokenStorage
         );
     }
 
@@ -96,14 +99,14 @@ class ServerTest extends TestCase
     {
         $server = $this->getServer();
 
-        $r = new ReflectionProperty($server, 'authorizationHandler');
+        $r = new ReflectionProperty($server, 'accessTokenStorage');
         $r->setAccessible(true);
-        $authorizationHandler = $r->getValue($server);
+        $accessTokenStorage = $r->getValue($server);
 
         $this->assertInstanceOf(Server::class, $server);
         $this->assertSame($this->identityProvider, $server->getIdentityProvider());
         $this->assertSame($this->clientProvider, $server->getClientProvider());
-        $this->assertSame($this->authorizationHandler, $authorizationHandler);
+        $this->assertSame($this->accessTokenStorage, $accessTokenStorage);
     }
 
     public function testInstanceImplementsServerInterface()
@@ -284,7 +287,34 @@ class ServerTest extends TestCase
         $this->assertInstanceOf(AuthorizationRequestValidator::class, $validator);
     }
 
-    public function testSuccessAuthorizationReturnAccessToken()
+    public function testUnsupportedResponseTypeReturnError()
+    {
+        $serverRequest = new Request(
+            [],
+            [],
+            'http://example.com/',
+            'GET',
+            'php://memory',
+            [],
+            [],
+            [
+                'client_id' => 'test',
+                'redirect_uri' => 'http://example.com',
+                'response_type' => 'string',
+            ]
+        );
+
+        $server = $this->getServer();
+        $response = $server->authorize($serverRequest);
+
+        $this->assertInstanceOf(ResponseInterface::class, $response);
+        $this->assertEquals(
+            "{\"code\":400,\"errors\":{\"response_type\":\"Unsupported response type\"}}",
+            $response->getBody()->getContents()
+        );
+    }
+
+    public function testImplicitGrantFlowReturnAccessToken()
     {
         $server = $this->getServer();
         $response = $server->authorize($this->getServerRequest());
@@ -297,6 +327,39 @@ class ServerTest extends TestCase
         $this->assertArrayHasKey('location', $response->getHeaders());
         $this->assertStringMatchesFormat(
             'http://example.com?access_token=%s',
+            $response->getHeader('location')[0]
+        );
+    }
+
+    public function testAuthorizationCodeGrantRequestTheCode()
+    {
+        $server = $this->getServer();
+
+        $serverRequest = new Request(
+            [],
+            [],
+            'http://example.com/',
+            'GET',
+            'php://memory',
+            [],
+            [],
+            [
+                'client_id' => 'test',
+                'redirect_uri' => 'http://example.com',
+                'response_type' => 'code',
+            ]
+        );
+
+        $response = $server->authorize($serverRequest);
+
+        $this->assertInstanceOf(ResponseInterface::class, $response);
+
+        $body = $response->getBody()->getContents();
+        $this->assertEquals('', $body);
+
+        $this->assertArrayHasKey('location', $response->getHeaders());
+        $this->assertStringMatchesFormat(
+            'http://example.com?code=%s',
             $response->getHeader('location')[0]
         );
     }

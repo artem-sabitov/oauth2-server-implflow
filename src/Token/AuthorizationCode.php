@@ -5,33 +5,32 @@ namespace OAuth2\Token;
 use OAuth2\ClientInterface;
 use OAuth2\IdentityInterface;
 
-class AccessToken extends AbstractExpiresToken
+class AuthorizationCode extends AbstractExpiresToken
 {
     /**
      * @var string
      */
-    protected $accessToken;
+    protected $authorizationCode;
 
     /**
-     * AccessToken constructor.
+     * AuthorizationCode constructor.
+     * @param string $authorizationCode
      * @param IdentityInterface $identity
      * @param ClientInterface $client
+     * @param int $expires
      */
     public function __construct(
-        string $accessToken,
+        string $authorizationCode,
         IdentityInterface $identity,
         ClientInterface $client,
         int $expires
     ) {
-        $this->accessToken = $accessToken;
+        $this->authorizationCode = $authorizationCode;
         parent::__construct($identity, $client, $expires);
     }
 
-    /**
-     * @return string
-     */
     public function getValue(): string
     {
-        return $this->accessToken;
+        return $this->authorizationCode;
     }
 }

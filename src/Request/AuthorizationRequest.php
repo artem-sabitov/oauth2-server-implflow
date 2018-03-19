@@ -10,8 +10,6 @@ use Psr\Http\Message\ServerRequestInterface;
 
 class AuthorizationRequest
 {
-    private const MAX_PARAMETER_LENGTH = 128;
-
     const CLIENT_ID_KEY = 'client_id';
     const REDIRECT_URI_KEY = 'redirect_uri';
     const RESPONSE_TYPE_KEY = 'response_type';
@@ -26,19 +24,19 @@ class AuthorizationRequest
     ];
 
     /**
-     * @var string|null
+     * @var string
      */
-    protected $clientId = null;
+    protected $clientId = '';
 
     /**
      * @var string|null
      */
-    protected $redirectUri = null;
+    protected $redirectUri = '';
 
     /**
      * @var string|null
      */
-    protected $responseType = null;
+    protected $responseType = '';
 
     /**
      * AuthorizationRequest constructor.
@@ -52,7 +50,7 @@ class AuthorizationRequest
     /**
      * @return string
      */
-    public function getClientId(): ?string
+    public function getClientId(): string
     {
         return $this->clientId;
     }
@@ -73,7 +71,7 @@ class AuthorizationRequest
     /**
      * @return string
      */
-    public function getRedirectUri(): ?string
+    public function getRedirectUri(): string
     {
         return $this->redirectUri;
     }
@@ -94,7 +92,7 @@ class AuthorizationRequest
     /**
      * @return string
      */
-    public function getResponseType(): ?string
+    public function getResponseType(): string
     {
         return $this->responseType;
     }
