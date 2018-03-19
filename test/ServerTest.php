@@ -6,6 +6,7 @@ namespace OAuth2Test;
 
 use OAuth2\ConfigProvider;
 use OAuth2\Handler\AbstractAuthorizationHandler;
+use OAuth2\Handler\AuthCodeGrant;
 use OAuth2\Handler\ImplicitGrant;
 use OAuth2\Options\Options;
 use OAuth2\Request\AuthorizationRequest;
@@ -23,6 +24,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use ReflectionProperty;
 use Zend\Diactoros\ServerRequest as Request;
+use Zend\Diactoros\Uri;
 
 class ServerTest extends TestCase
 {
@@ -362,5 +364,12 @@ class ServerTest extends TestCase
             'http://example.com?code=%s',
             $response->getHeader('location')[0]
         );
+
+        $uri = new Uri($response->getHeader('location')[0]);
+        $params = [];
+        parse_str($uri->getQuery(), $params);
+        $code = $params[AuthCodeGrant::AUTHORIZATION_GRANT];
+
+        $this->assertNotEmpty($code);
     }
 }
