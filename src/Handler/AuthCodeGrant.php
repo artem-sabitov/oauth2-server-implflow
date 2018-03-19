@@ -42,7 +42,20 @@ class AuthCodeGrant extends AbstractAuthorizationHandler
 
         if ($request->getResponseType() === self::AUTHORIZATION_GRANT) {
             $this->authorizationCode = $this->generateAuthorizationCode();
+            $this->redirectUri = $this->generateRedirectUri();
+        } else {
+            throw new RuntimeException(sprintf(
+                "Handler %s can not process a response_type ''", self::class)
+            );
         }
+
+        $this->responseData = [
+            'headers' => [
+                self::HEADER_LOCATION => $this->redirectUri
+            ]
+        ];
+
+        return $this;
     }
 
     protected function generateAuthorizationCode(): AuthorizationCode
@@ -64,18 +77,19 @@ class AuthCodeGrant extends AbstractAuthorizationHandler
     protected function generateRedirectUri(): UriInterface
     {
         $redirectUri = null;
+        $query = [];
 
         if ($this->hasAuthorizationCode()) {
             $redirectUri = $this->authorizationCode->getClient()->getRedirectUri();
             $query = http_build_query([
-                $this->options->getAccessTokenQueryKey() => $this->accessToken->getValue()
+                $this->options->getAuthorizationCodeQueryKey() => $this->authorizationCode->getValue()
             ]);
         }
 
         if ($this->hasAccessToken()) {
             $redirectUri = $this->accessToken->getClient()->getRedirectUri();
             $query = http_build_query([
-                $this->options->getAccessTokenQueryKey() => $this->accessToken->getValue()
+                $this->options->getAuthorizationCodeQueryKey() => $this->accessToken->getValue()
             ]);
         }
 

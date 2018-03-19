@@ -19,6 +19,8 @@ use Zend\Stdlib\ArrayUtils;
 
 class Server implements ServerInterface
 {
+    const INTERNAL_ERROR_MESSAGE = 'Server encountered an unexpected error while trying to process the request.';
+
     /**
      * Options
      */
@@ -156,11 +158,7 @@ class Server implements ServerInterface
                 try {
                     return $handler->handle($request);
                 } catch (RuntimeException $e) {
-                    var_dump($e->getMessage());
-                    die;
-                    throw new ParameterException(
-                        'Server encountered an unexpected error while trying to process the request.'
-                    );
+                    throw new ParameterException(self::INTERNAL_ERROR_MESSAGE);
                 }
             }
         }
@@ -177,8 +175,7 @@ class Server implements ServerInterface
             }
         }
 
-        var_dump($data);
-        die;
+        throw new ParameterException(self::INTERNAL_ERROR_MESSAGE);
     }
 
     /**

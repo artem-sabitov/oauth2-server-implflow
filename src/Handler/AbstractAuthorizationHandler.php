@@ -40,7 +40,7 @@ abstract class AbstractAuthorizationHandler
     /**
      * @var array
      */
-    protected $responseData;
+    protected $responseData = [];
 
     /**
      * AbstractGrantType constructor.

@@ -10,6 +10,7 @@ class Options extends AbstractOptions
 {
     const DEFAULT_ACCESS_TOKEN_KEY = 'access_token';
     const DEFAULT_REDIRECT_URI_KEY = 'redirect_uri';
+    const DEFAULT_AUTHORIZATION_CODE_KEy = 'code';
 
     /**
      * @var string
@@ -35,6 +36,11 @@ class Options extends AbstractOptions
      * @var string
      */
     protected $redirectUriQueryKey = self::DEFAULT_REDIRECT_URI_KEY;
+
+    /**
+     * @var string
+     */
+    protected $authorizationCodeQueryKey = self::DEFAULT_AUTHORIZATION_CODE_KEy;
 
     /**
      * @var
@@ -99,6 +105,16 @@ class Options extends AbstractOptions
     public function setRedirectUriQueryKey(string $redirectUriQueryKey): void
     {
         $this->redirectUriQueryKey = $redirectUriQueryKey;
+    }
+
+    public function getAuthorizationCodeQueryKey(): string
+    {
+        return $this->authorizationCodeQueryKey;
+    }
+
+    public function setAuthorizationCodeQueryKey(string $authorizationCodeQueryKey)
+    {
+        $this->authorizationCodeQueryKey = $authorizationCodeQueryKey;
     }
 
     public function getAuthorizationHandlerMap(): array
