@@ -10,7 +10,7 @@ class Options extends AbstractOptions
 {
     const DEFAULT_ACCESS_TOKEN_KEY = 'access_token';
     const DEFAULT_REDIRECT_URI_KEY = 'redirect_uri';
-    const DEFAULT_AUTHORIZATION_CODE_KEy = 'code';
+    const DEFAULT_AUTHORIZATION_CODE_KEY = 'code';
 
     /**
      * @var string
@@ -40,7 +40,7 @@ class Options extends AbstractOptions
     /**
      * @var string
      */
-    protected $authorizationCodeQueryKey = self::DEFAULT_AUTHORIZATION_CODE_KEy;
+    protected $authorizationCodeQueryKey = self::DEFAULT_AUTHORIZATION_CODE_KEY;
 
     /**
      * @var
