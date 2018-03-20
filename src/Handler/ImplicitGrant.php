@@ -8,11 +8,14 @@ use OAuth2\Exception\ParameterException;
 use OAuth2\Request\AuthorizationRequest;
 use OAuth2\Token\AccessToken;
 use OAuth2\Token\TokenGenerator;
+use OAuth2\Validator\AuthorizationRequestValidator;
 use Psr\Http\Message\UriInterface;
 use Zend\Diactoros\Uri;
 
 class ImplicitGrant extends AbstractAuthorizationHandler
 {
+    public const SUPPORTED_RESPONSE_TYPE = 'token';
+
     /**
      * @var AccessToken
      */
@@ -30,6 +33,12 @@ class ImplicitGrant extends AbstractAuthorizationHandler
 
     public function handle(AuthorizationRequest $request): AbstractAuthorizationHandler
     {
+        $validator = $this->getAuthorizationRequestValidator();
+        if ($validator->validate($request) === false) {
+            $messages = $validator->getErrorMessages();
+            throw ParameterException::create($messages);
+        }
+
         $this->request = $request;
         $this->accessToken = $this->generateAccessToken();
         $this->redirectUri = $this->generateRedirectUri();
@@ -47,6 +56,13 @@ class ImplicitGrant extends AbstractAuthorizationHandler
         ];
 
         return $this;
+    }
+
+    public function canHandle(AuthorizationRequest $request): bool
+    {
+        $responseType = $request->get(self::RESPONSE_TYPE_KEY);
+
+        return $responseType === self::SUPPORTED_RESPONSE_TYPE;
     }
 
     protected function generateAccessToken(): AccessToken
@@ -77,5 +93,10 @@ class ImplicitGrant extends AbstractAuthorizationHandler
     protected function hasGeneratedAccessToken(): bool
     {
         return $this->accessToken instanceof AccessToken;
+    }
+
+    public function getAuthorizationRequestValidator(): AuthorizationRequestValidator
+    {
+        return new AuthorizationRequestValidator();
     }
 }

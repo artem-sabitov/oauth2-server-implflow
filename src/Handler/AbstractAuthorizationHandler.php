@@ -15,6 +15,9 @@ use Psr\Http\Message\UriInterface;
 abstract class AbstractAuthorizationHandler
 {
     public const AUTHORIZATION_GRANT = '';
+    public const REDIRECT_URI_KEY = 'redirect_uri';
+    public const RESPONSE_TYPE_KEY = 'response_type';
+
     protected const HEADER_LOCATION = 'Location';
 
     /**
@@ -58,6 +61,8 @@ abstract class AbstractAuthorizationHandler
         $this->clientProvider = $clientProvider;
         $this->accessTokenStorage = $accessTokenStorage;
     }
+
+    abstract public function canHandle(AuthorizationRequest $request): bool;
 
     abstract public function handle(AuthorizationRequest $request): AbstractAuthorizationHandler;
 

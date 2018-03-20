@@ -23,6 +23,8 @@ class AuthorizationRequest
         self::RESPONSE_TYPE_KEY,
     ];
 
+    protected $parameters = [];
+
     /**
      * @var string
      */
@@ -111,11 +113,27 @@ class AuthorizationRequest
     }
 
     /**
+     * @param string $key
+     * @return string
+     */
+    public function get(string $key): string
+    {
+        $value = '';
+        if (isset($this->parameters[$key]) === true) {
+            $value = $this->parameters[$key];
+        }
+
+        return $value;
+    }
+
+    /**
      * @param array $params
      */
     private function setParams(array $params): void
     {
         foreach ($params as $key => $value) {
+            $this->parameters[$key] = $value;
+
             switch ($key) {
                 case self::CLIENT_ID_KEY:
                     $this->clientId = $value;

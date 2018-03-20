@@ -25,6 +25,7 @@ use Psr\Http\Message\ResponseInterface;
 use ReflectionProperty;
 use Zend\Diactoros\ServerRequest as Request;
 use Zend\Diactoros\Uri;
+use Zend\Json\Json;
 
 class ServerTest extends TestCase
 {
@@ -281,14 +282,6 @@ class ServerTest extends TestCase
         $this->assertNotSame($server, $newServer);
     }
 
-    public function testGetAuthorizationRequestValidatorReturnNewValidator()
-    {
-        $server = $this->getServer();
-        $validator = $server->getAuthorizationRequestValidator();
-
-        $this->assertInstanceOf(AuthorizationRequestValidator::class, $validator);
-    }
-
     public function testUnsupportedResponseTypeReturnError()
     {
         $serverRequest = new Request(
@@ -371,5 +364,42 @@ class ServerTest extends TestCase
         $code = $params[AuthCodeGrant::AUTHORIZATION_GRANT];
 
         $this->assertNotEmpty($code);
+    }
+
+    public function testRequestWithCorrectAuthorizationCodeReturnAccessToken()
+    {
+        $server = $this->getServer();
+
+        $serverRequest = new Request(
+            [],
+            [],
+            'http://example.com/',
+            'GET',
+            'php://memory',
+            [],
+            [],
+            [
+                'grant_type' => 'authorization_code',
+                'client_id' => 'test',
+                'client_secret' => 'secret',
+                'redirect_uri' => 'http://example.com',
+            ]
+        );
+
+        $response = $server->authorize($serverRequest);
+        $body = $response->getBody()->getContents();
+        $payload = Json::decode($body, Json::TYPE_ARRAY);
+
+        $this->assertInstanceOf(ResponseInterface::class, $response);
+        $this->assertNotEmpty($body);
+        $this->assertJson($body);
+        $this->assertArrayHasKey('access_token', $payload);
+        $this->assertNotEmpty($payload['access_token']);
+        $this->assertArrayHasKey('token_type', $payload);
+        $this->assertEquals($payload['token_type'], 'Bearer');
+        $this->assertArrayHasKey('expires_in', $payload);
+        $this->assertArrayHasKey('expires_on', $payload);
+        $this->assertArrayHasKey('refresh_token', $payload);
+        $this->assertNotEmpty($payload['refresh_token']);
     }
 }

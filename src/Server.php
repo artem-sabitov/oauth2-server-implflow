@@ -52,6 +52,11 @@ class Server implements ServerInterface
     protected $authorizationHandler;
 
     /**
+     * @var AuthorizationRequestValidator
+     */
+    protected $authorizationRequestValidator;
+
+    /**
      * Server constructor.
      * @param ServerRequestInterface $request
      */
@@ -82,7 +87,6 @@ class Server implements ServerInterface
         $this->authorizationRequest = $this->createAuthorizationRequest($request);
 
         try {
-            $this->validateAuthorizationRequest($this->authorizationRequest);
             $handler = $this->handleAuthorizationRequest($this->authorizationRequest);
         } catch (ParameterException $e) {
             return $this->createErrorResponse(400, $e->getMessages());
@@ -105,33 +109,11 @@ class Server implements ServerInterface
     }
 
     /**
-     * @throw ParameterException
-     */
-    public function validateAuthorizationRequest(AuthorizationRequest $request): void
-    {
-        $validator = $this->getAuthorizationRequestValidator();
-
-        if ($validator->validate($request) === false) {
-            $messages = $validator->getErrorMessages();
-            throw ParameterException::create($messages);
-        }
-    }
-
-    /**
      * @throws ParameterException
      */
     public function handleAuthorizationRequest(AuthorizationRequest $request): AbstractAuthorizationHandler
     {
-        $availableResponseType = $this->options->getAvailableResponseTypes();
-
-        if (! ArrayUtils::inArray($request->getResponseType(), $availableResponseType)) {
-            throw (new ParameterException())->withMessages([
-                AuthorizationRequest::RESPONSE_TYPE_KEY => 'Unsupported response type'
-            ]);
-        }
-
         $handlers = $this->options->getAuthorizationHandlerMap();
-
         if (count($handlers) === 0) {
             throw new RuntimeException(
                 "Server does not support any type of oauth2 authorization. \n" .
@@ -147,20 +129,32 @@ class Server implements ServerInterface
          * @var AbstractAuthorizationHandler $className
          */
         foreach ($handlers as $handledResponseType => $className) {
-            if ($handledResponseType === $request->getResponseType()) {
-                /** @var AbstractAuthorizationHandler $handler */
-                $handler = new $className(
-                    $this->options,
-                    $this->identityProvider,
-                    $this->clientProvider,
-                    $this->accessTokenStorage
-                );
+            /** @var AbstractAuthorizationHandler $handler */
+            $handler = new $className(
+                $this->options,
+                $this->identityProvider,
+                $this->clientProvider,
+                $this->accessTokenStorage
+            );
+
+            if ($handler->canHandle($request)) {
                 try {
                     return $handler->handle($request);
                 } catch (RuntimeException $e) {
                     throw new ParameterException(self::INTERNAL_ERROR_MESSAGE);
                 }
             }
+        }
+
+        // TODO @artem_sabitov move to method
+        $validator = $this->getOrCreateAuthorizationRequestValidator();
+        $validator->validate($request);
+
+        $availableResponseType = $this->options->getAvailableResponseTypes();
+        if (! ArrayUtils::inArray($request->getResponseType(), $availableResponseType)) {
+            throw (new ParameterException())->withMessages([
+                AuthorizationRequest::RESPONSE_TYPE_KEY => 'Unsupported response type'
+            ]);
         }
 
         throw new ParameterException('Unsupported authorization request.');
@@ -173,6 +167,11 @@ class Server implements ServerInterface
             if ($headers['Location']) {
                 return new Response\RedirectResponse($headers['Location']);
             }
+        }
+
+        if (isset($data['payload']) === true) {
+            $payload = $data['payload'];
+            return new Response\JsonResponse($payload);
         }
 
         throw new ParameterException(self::INTERNAL_ERROR_MESSAGE);
@@ -262,11 +261,12 @@ class Server implements ServerInterface
         return $server;
     }
 
-    /**
-     * @return AuthorizationRequestValidator
-     */
-    public function getAuthorizationRequestValidator()
+    public function getOrCreateAuthorizationRequestValidator(): AuthorizationRequestValidator
     {
-        return new AuthorizationRequestValidator();
+        if ($this->authorizationRequestValidator === null) {
+            $this->authorizationRequestValidator = new AuthorizationRequestValidator();
+        }
+
+        return $this->authorizationRequestValidator;
     }
 }

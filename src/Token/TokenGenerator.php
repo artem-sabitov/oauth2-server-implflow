@@ -27,7 +27,7 @@ abstract class TokenGenerator
             throw new RuntimeException("Can not generate token of type {$tokenClassName}");
         }
         return new $tokenClassName(
-            self::generatePayload($identity, $client),
+            self::generateAccessTokenString($identity, $client),
             $identity,
             $client,
             self::generateExpiresAt()
@@ -39,7 +39,7 @@ abstract class TokenGenerator
      * @param ClientInterface $client
      * @return string
      */
-    protected static function generatePayload(IdentityInterface $identity, ClientInterface $client): string
+    public static function generateAccessTokenString(IdentityInterface $identity, ClientInterface $client): string
     {
         $payload = [
             'id' => $identity->getIdentityId(),
@@ -49,6 +49,14 @@ abstract class TokenGenerator
         ];
 
         return self::base64UrlEncode(Json::encode($payload));
+    }
+
+    /**
+     * @return string
+     */
+    public static function generateExpiresAt(): string
+    {
+        return (new DateTime())->getTimestamp() + self::EXPIRATION_TIME ;
     }
 
     /**
@@ -67,14 +75,6 @@ abstract class TokenGenerator
     protected static function base64UrlDecode($value): string
     {
         return base64_decode(str_replace(['-', '_'], ['+', '/'], $value));
-    }
-
-    /**
-     * @return string
-     */
-    protected static function generateExpiresAt(): string
-    {
-        return (new DateTime())->getTimestamp() + self::EXPIRATION_TIME ;
     }
 
     /**
