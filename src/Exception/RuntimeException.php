@@ -1,8 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace OAuth2\Exception;
 
-class RuntimeException extends \RuntimeException
+class RuntimeException extends \RuntimeException implements ExceptionInterface
 {
     /**
      * @var array

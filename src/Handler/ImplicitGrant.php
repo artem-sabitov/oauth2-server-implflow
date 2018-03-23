@@ -5,16 +5,21 @@ declare(strict_types=1);
 namespace OAuth2\Handler;
 
 use OAuth2\Exception\ParameterException;
+use OAuth2\Provider\ClientProviderInterface;
+use OAuth2\Provider\IdentityProviderInterface;
 use OAuth2\Request\AuthorizationRequest;
+use OAuth2\Storage\AccessTokenStorageInterface;
 use OAuth2\Token\AccessToken;
 use OAuth2\Token\TokenGenerator;
 use OAuth2\Validator\AuthorizationRequestValidator;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
 use Zend\Diactoros\Uri;
+use Zend\Expressive\Authentication\UserInterface;
 
 class ImplicitGrant extends AbstractAuthorizationHandler
 {
-    public const SUPPORTED_RESPONSE_TYPE = 'token';
+    public const AUTHORIZATION_GRANT = 'token';
 
     /**
      * @var AccessToken
@@ -31,7 +36,16 @@ class ImplicitGrant extends AbstractAuthorizationHandler
      */
     protected $request;
 
-    public function handle(AuthorizationRequest $request): AbstractAuthorizationHandler
+    public function __construct(
+        array $config,
+        ClientProviderInterface $clientProvider,
+        AccessTokenStorageInterface $accessTokenStorage,
+        callable $responseFactory
+    ) {
+        parent::__construct($config, $clientProvider, $accessTokenStorage);
+    }
+
+    public function handle(UserInterface $user, AuthorizationRequest $request): ResponseInterface
     {
         $validator = $this->getAuthorizationRequestValidator();
         if ($validator->validate($request) === false) {

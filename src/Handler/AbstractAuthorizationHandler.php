@@ -10,7 +10,9 @@ use OAuth2\Provider\IdentityProviderInterface;
 use OAuth2\Request\AuthorizationRequest;
 use OAuth2\Storage\AccessTokenStorageInterface;
 use OAuth2\Token\AccessToken;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
+use Zend\Expressive\Authentication\UserInterface;
 
 abstract class AbstractAuthorizationHandler
 {
@@ -21,9 +23,9 @@ abstract class AbstractAuthorizationHandler
     protected const HEADER_LOCATION = 'Location';
 
     /**
-     * @var Options
+     * @var array
      */
-    protected $options;
+    protected $config;
 
     /**
      * @var IdentityProviderInterface
@@ -51,29 +53,24 @@ abstract class AbstractAuthorizationHandler
      * @param ClientProviderInterface $clientProvider
      */
     public function __construct(
-        Options $options,
-        IdentityProviderInterface $identityProvider,
+        array $config,
         ClientProviderInterface $clientProvider,
-        AccessTokenStorageInterface $accessTokenStorage
+        AccessTokenStorageInterface $accessTokenStorage,
+        callable $responseFactory
     ) {
-        $this->options = $options;
-        $this->identityProvider = $identityProvider;
+        $this->config = $config;
         $this->clientProvider = $clientProvider;
         $this->accessTokenStorage = $accessTokenStorage;
+        $this->responseFactory = $responseFactory;
     }
 
     abstract public function canHandle(AuthorizationRequest $request): bool;
 
-    abstract public function handle(AuthorizationRequest $request): AbstractAuthorizationHandler;
+    abstract public function handle(UserInterface $user, AuthorizationRequest $request): ResponseInterface;
 
     abstract protected function generateAccessToken(): AccessToken;
 
     abstract protected function generateRedirectUri(): UriInterface;
-
-    public function getResponseData(): array
-    {
-        return $this->responseData;
-    }
 
     public function getIdentityProvider(): IdentityProviderInterface
     {
