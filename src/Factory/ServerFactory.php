@@ -3,7 +3,9 @@
 namespace OAuth2\Factory;
 
 use OAuth2\Exception;
+use OAuth2\Handler\AuthorizationHandlerInterface;
 use OAuth2\Server;
+use OAuth2\ServerInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 
@@ -18,6 +20,34 @@ class ServerFactory
             );
         }
 
-        return new Server($config, $container->get(ResponseInterface::class));
+        if (! isset($config['authorization_handlers'])) {
+            throw new Exception\InvalidConfigException(
+                'No authorization handlers configured for server'
+            );
+        }
+
+        $server = new Server($config, $container->get(ResponseInterface::class));
+        $this->registerHandlers($container, $server, $config['authorization_handlers']);
+
+        return $server;
+    }
+
+    /**
+     * @throws Exception\InvalidConfigException
+     */
+    private function registerHandlers(ContainerInterface $container, ServerInterface $server, array $handlers) : void
+    {
+        /** @var AuthorizationHandlerInterface $handler */
+        foreach ($handlers as $responseType => $handler) {
+            if (! $container->has($handler)) {
+                throw new Exception\InvalidConfigException(sprintf(
+                    'Cannot register %s handler for response type \'%s\'',
+                    $handler,
+                    $responseType
+                ));
+            }
+
+            $server->registerHandler($responseType, $container->get($handler));
+        }
     }
 }

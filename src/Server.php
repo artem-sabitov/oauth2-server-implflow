@@ -72,6 +72,12 @@ class Server implements ServerInterface
             return new Response\RedirectResponse($this->getAuthenticationUri());
         }
 
+        if (! $user instanceof IdentityInterface) {
+            throw new Exception\RuntimeException(sprintf(
+                'User instance must implement the %s interface', IdentityInterface::class
+            ));
+        }
+
         $authorizationRequest = $this->createAuthorizationRequest($request);
 
         try {
