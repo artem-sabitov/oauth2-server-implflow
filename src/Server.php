@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace OAuth2;
 
+use OAuth2\Exception;
 use OAuth2\Exception\ParameterException;
 use OAuth2\Exception\RuntimeException;
-use OAuth2\Handler\AbstractAuthorizationHandler;
 use OAuth2\Handler\AuthorizationHandlerInterface;
-use OAuth2\Validator\AuthorizationRequestValidator;
 use OAuth2\Request\AuthorizationRequest;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -27,7 +26,7 @@ class Server implements ServerInterface
     /**
      * @var array
      */
-    protected $handlers;
+    protected $handlers = [];
 
     /**
      * @var callable
@@ -62,10 +61,12 @@ class Server implements ServerInterface
     }
 
     /**
-     * @param ServerRequestInterface|null $request
+     * @param UserInterface $user
+     * @param ServerRequestInterface $request
      * @return ResponseInterface
+     * @throws Exception\RuntimeException
      */
-    public function authorize(UserInterface $user, ServerRequestInterface $request): ResponseInterface
+    public function authorize(?UserInterface $user, ServerRequestInterface $request): ResponseInterface
     {
         if (! $this->isAuthenticated($user)) {
             return new Response\RedirectResponse($this->getAuthenticationUri());
@@ -75,7 +76,7 @@ class Server implements ServerInterface
 
         try {
             $handler = $this->getHandler($authorizationRequest);
-            $response = $handler->handle($authorizationRequest);
+            $response = $handler->handle($user, $authorizationRequest);
         } catch (ParameterException $e) {
             return $this->createErrorResponse(400, $e->getMessages());
         }
@@ -83,7 +84,7 @@ class Server implements ServerInterface
         return $response;
     }
 
-    public function isAuthenticated(UserInterface $user): bool
+    public function isAuthenticated(?UserInterface $user): bool
     {
         return $user instanceof UserInterface;
     }
