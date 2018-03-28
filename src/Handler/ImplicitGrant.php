@@ -97,8 +97,8 @@ class ImplicitGrant extends AbstractAuthorizationHandler implements Authorizatio
     {
         $query = [
             self::ACCESS_TOKEN_KEY => $accessToken->getValue(),
-            self::EXPIRES_IN_KEY => $accessToken->getExpires(),
-            self::EXPIRES_ON_KEY => (new \DateTime())->getTimestamp() + $accessToken->getExpires(),
+            self::EXPIRES_IN_KEY => $this->config['expiration_time'],
+            self::EXPIRES_ON_KEY => $accessToken->getExpires(),
         ];
 
         $redirectUri = $accessToken->getClient()->getRedirectUri();
