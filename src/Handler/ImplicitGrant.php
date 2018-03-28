@@ -6,6 +6,7 @@ namespace OAuth2\Handler;
 
 use OAuth2\ClientInterface;
 use OAuth2\Exception\ParameterException;
+use OAuth2\Exception\RuntimeException;
 use OAuth2\IdentityInterface;
 use OAuth2\Request\AuthorizationRequest;
 use OAuth2\Token\AccessToken;
@@ -66,9 +67,9 @@ class ImplicitGrant extends AbstractAuthorizationHandler implements Authorizatio
         $accessToken = $this->generateAccessToken();
         $this->tokenRepository->write($accessToken);
 
-        $this->redirectUri = $this->generateRedirectUri($accessToken);
-
-        return new RedirectResponse($this->redirectUri);
+        return new RedirectResponse(
+            $this->generateRedirectUri($accessToken)
+        );
     }
 
     public function canHandle(AuthorizationRequest $request): bool
@@ -95,6 +96,11 @@ class ImplicitGrant extends AbstractAuthorizationHandler implements Authorizatio
 
     protected function generateRedirectUri(AccessToken $accessToken): UriInterface
     {
+        $requestedRedirectUri = '';
+        if ($this->request instanceof AuthorizationRequest) {
+            $requestedRedirectUri = $this->request->get(self::REDIRECT_URI_KEY);
+        }
+
         $query = [
             self::ACCESS_TOKEN_KEY => $accessToken->getValue(),
             self::EXPIRES_IN_KEY => $this->config['expiration_time'],
@@ -103,7 +109,17 @@ class ImplicitGrant extends AbstractAuthorizationHandler implements Authorizatio
 
         $redirectUri = $accessToken->getClient()->getRedirectUri();
 
-        return (new Uri($redirectUri))->withQuery(http_build_query($query));
+        if (strpos($requestedRedirectUri, $redirectUri) === false) {
+            throw (new ParameterException())->withMessages([
+                self::REDIRECT_URI_KEY => sprintf(
+                    "Uri %s can not register for client %s",
+                    $requestedRedirectUri,
+                    $accessToken->getClient()->getClientId()
+                )
+            ]);
+        }
+
+        return (new Uri($requestedRedirectUri))->withQuery(http_build_query($query));
     }
 
     public function getAuthorizationRequestValidator(): AuthorizationRequestValidator

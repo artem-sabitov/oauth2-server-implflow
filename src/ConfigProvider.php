@@ -23,18 +23,17 @@ class ConfigProvider
     public function getOAuthConfig() : array
     {
         return [
-//            'authentication_uri' => 'http://example.com/login',
-//            'available_response_types' => [
-//                'token',
-//                'code',
-//            ],
-            // Use 'authorization_handler_map' to map a grant type to flow handler. The
-            // key is the response_type parameter, the value is the handler to authorization flow.
-//            'authorization_handler_map' => [
-            // response_type => Fully\Qualified\ClassOrInterfaceName::class
-//                'token' => \OAuth2\Handler\ImplicitGrant::class,
-//                'code' => \OAuth2\Handler\AuthCodeGrant::class,
-//            ],
+            'authentication_uri' => '',
+            'authorization_handlers' => [],
+            'implicit_flow' => [
+                'expiration_time' => 60 * 60 * 6, // 6 hours
+                'issuer_identifier' => ''
+            ],
+            'authorization_code_flow' => [
+                'expiration_time' => 60 * 60 * 6, // 6 hours
+                'issuer_identifier' => '',
+                'refresh_token_extra_time' => 60 * 60,
+            ],
         ];
     }
 

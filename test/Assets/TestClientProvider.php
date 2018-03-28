@@ -3,11 +3,11 @@
 namespace OAuth2Test\Assets;
 
 use InvalidArgumentException;
-use OAuth2\AuthorizationRequest;
 use OAuth2\Client;
 use OAuth2\ClientInterface;
 use OAuth2\Exception\ParameterException;
 use OAuth2\Provider\ClientProviderInterface;
+use OAuth2\Request\AuthorizationRequest;
 
 class TestClientProvider implements ClientProviderInterface
 {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OAuth2Test;
 
 use OAuth2\ConfigProvider;
+use OAuth2\Exception\InvalidConfigException;
 use OAuth2\Exception\RuntimeException;
 use OAuth2\Handler\AuthCodeGrant;
 use OAuth2\Handler\ImplicitGrant;
@@ -179,7 +180,7 @@ class ServerTest extends TestCase
         $server = $this->getServer();
         $user = $this->getUser();
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(InvalidConfigException::class);
         $server->authorize($user, $serverRequest);
     }
 
@@ -309,10 +310,53 @@ class ServerTest extends TestCase
         );
     }
 
+    public function testImplicitGrantReturnErrorWithUnregisteredRedirectUri()
+    {
+        $serverRequest = new Request(
+            [],
+            [],
+            'http://example.com/',
+            'GET',
+            'php://memory',
+            [],
+            [],
+            [
+                'client_id' => 'test',
+                'redirect_uri' => 'http://test.com',
+                'response_type' => 'token',
+            ]
+        );
+
+        $server = $this->registerImplicitGrantHandler($this->getServer());
+        $response = $server->authorize($this->getUser(), $serverRequest);
+
+        $this->assertInstanceOf(ResponseInterface::class, $response);
+
+        $this->assertEquals(
+            "{\"code\":400,\"errors\":{\"redirect_uri\":\"Uri http://test.com can not register for client test\"}}",
+            $response->getBody()->getContents()
+        );
+    }
+
     public function testImplicitGrantFlowReturnAccessToken()
     {
+        $serverRequest = new Request(
+            [],
+            [],
+            'http://example.com/',
+            'GET',
+            'php://memory',
+            [],
+            [],
+            [
+                'client_id' => 'test',
+                'redirect_uri' => 'http://example.com',
+                'response_type' => 'token',
+            ]
+        );
+
         $server = $this->registerImplicitGrantHandler($this->getServer());
-        $response = $server->authorize($this->getUser(), $this->getServerRequest());
+        $response = $server->authorize($this->getUser(), $serverRequest);
 
         $this->assertInstanceOf(ResponseInterface::class, $response);
 

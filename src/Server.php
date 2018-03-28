@@ -111,7 +111,7 @@ class Server implements ServerInterface
     public function getHandler(AuthorizationRequest $request): AuthorizationHandlerInterface
     {
         if (count($this->handlers) === 0) {
-            throw new RuntimeException(
+            throw new Exception\InvalidConfigException(
                 'No authorization handlers registered'
             );
         }
