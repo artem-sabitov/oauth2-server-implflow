@@ -15,14 +15,20 @@ class Client implements ClientInterface
     protected $redirectUri;
 
     /**
+     * @var string
+     */
+    protected $secret;
+
+    /**
      * Client constructor.
      * @param string $identificator
      * @param string|array $redirectUri
      */
-    public function __construct(string $identificator, string $redirectUri)
+    public function __construct(string $identificator, string $redirectUri, string $secret)
     {
         $this->identificator = $identificator;
         $this->redirectUri = $redirectUri;
+        $this->secret = $secret;
     }
 
     /**
@@ -39,5 +45,10 @@ class Client implements ClientInterface
     public function getRedirectUri(): string
     {
         return $this->redirectUri;
+    }
+
+    public function getClient(): string
+    {
+        return $this->secret;
     }
 }

@@ -22,6 +22,7 @@ class TestClientProvider implements ClientProviderInterface
     private $clientProperties = [
         'identificator' => 'test',
         'redirect_uri' => 'http://example.com',
+        'secret' => 'secret',
     ];
 
     public function __construct($clientProperties = [])
@@ -33,7 +34,8 @@ class TestClientProvider implements ClientProviderInterface
         $clientId = $this->clientProperties['identificator'];
         $this->clients[$clientId] = new Client(
             $this->clientProperties['identificator'],
-            $this->clientProperties['redirect_uri']
+            $this->clientProperties['redirect_uri'],
+            $this->clientProperties['secret']
         );
     }
 
