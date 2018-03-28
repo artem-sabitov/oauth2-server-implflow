@@ -13,16 +13,11 @@ class AuthorizationRequest
     const CLIENT_ID_KEY = 'client_id';
     const REDIRECT_URI_KEY = 'redirect_uri';
     const RESPONSE_TYPE_KEY = 'response_type';
+    const STATE_KEY = 'state';
 
     /**
      * @var array
      */
-    protected $requiredParameters = [
-        self::CLIENT_ID_KEY,
-        self::REDIRECT_URI_KEY,
-        self::RESPONSE_TYPE_KEY,
-    ];
-
     protected $parameters = [];
 
     /**
@@ -31,12 +26,12 @@ class AuthorizationRequest
     protected $clientId = '';
 
     /**
-     * @var string|null
+     * @var string
      */
     protected $redirectUri = '';
 
     /**
-     * @var string|null
+     * @var string
      */
     protected $responseType = '';
 
@@ -143,6 +138,9 @@ class AuthorizationRequest
                     break;
                 case self::RESPONSE_TYPE_KEY:
                     $this->responseType = $value;
+                    break;
+                case self::STATE_KEY:
+                    $this->state = $value;
                     break;
             }
         }

@@ -14,7 +14,7 @@ use OAuth2\Provider\ClientProviderInterface;
 use OAuth2\Provider\IdentityProviderInterface;
 use OAuth2\Server;
 use OAuth2\ServerInterface;
-use OAuth2\Storage\AccessTokenStorageInterface;
+use OAuth2\TokenRepositoryInterface;
 use OAuth2Test\Assets\TestClientProvider;
 use OAuth2Test\Assets\TestSuccessIdentityProvider;
 use PHPUnit\Framework\TestCase;
@@ -49,9 +49,9 @@ class ServerTest extends TestCase
     private $clientProvider;
 
     /**
-     * @var AccessTokenStorageInterface
+     * @var TokenRepositoryInterface
      */
-    private $accessTokenStorage;
+    private $tokenRepository;
 
     /**
      * @var array
@@ -73,7 +73,7 @@ class ServerTest extends TestCase
 
         $this->identityProvider = new TestSuccessIdentityProvider();
         $this->clientProvider = new TestClientProvider();
-        $this->accessTokenStorage = $this->createMock(AccessTokenStorageInterface::class);
+        $this->tokenRepository = $this->createMock(TokenRepositoryInterface::class);
     }
 
     public function getServer(): ServerInterface
@@ -83,14 +83,29 @@ class ServerTest extends TestCase
 
     public function registerImplicitGrantHandler(ServerInterface $server): ServerInterface
     {
-        $handler = new ImplicitGrant([], $this->clientProvider, $this->accessTokenStorage);
+        $handler = new ImplicitGrant(
+            [
+                'expiration_time' => 60 * 60,
+                'issuer_identifier' => 'test_server',
+            ],
+            $this->clientProvider,
+            $this->tokenRepository
+        );
 
         return $server->registerHandler('token', $handler);
     }
 
     public function registerAuthCodeGrantHandler(ServerInterface $server): ServerInterface
     {
-        $handler = new AuthCodeGrant([], $this->clientProvider, $this->accessTokenStorage);
+        $handler = new AuthCodeGrant(
+            [
+                'expiration_time' => 60 * 60,
+                'issuer_identifier' => 'test_server',
+                'refresh_token_extra_time' => 60 * 60,
+            ],
+            $this->clientProvider,
+            $this->tokenRepository
+        );
 
         return $server->registerHandler('code', $handler);
     }

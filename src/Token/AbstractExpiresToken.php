@@ -5,7 +5,7 @@ namespace OAuth2\Token;
 use OAuth2\ClientInterface;
 use OAuth2\IdentityInterface;
 
-abstract class AbstractExpiresToken
+abstract class AbstractExpiresToken implements TokenInterface
 {
     /**
      * @var IdentityInterface

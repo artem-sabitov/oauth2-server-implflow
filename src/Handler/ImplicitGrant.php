@@ -4,27 +4,25 @@ declare(strict_types=1);
 
 namespace OAuth2\Handler;
 
+use OAuth2\ClientInterface;
 use OAuth2\Exception\ParameterException;
 use OAuth2\IdentityInterface;
-use OAuth2\Provider\ClientProviderInterface;
-use OAuth2\Provider\IdentityProviderInterface;
 use OAuth2\Request\AuthorizationRequest;
-use OAuth2\Storage\AccessTokenStorageInterface;
 use OAuth2\Token\AccessToken;
-use OAuth2\Token\TokenGenerator;
+use OAuth2\Token\TokenInterface;
+use OAuth2\Token\TokenBuilder;
 use OAuth2\Validator\AuthorizationRequestValidator;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
 use Zend\Diactoros\Response\RedirectResponse;
 use Zend\Diactoros\Uri;
-use Zend\Expressive\Authentication\UserInterface;
 
 class ImplicitGrant extends AbstractAuthorizationHandler implements AuthorizationHandlerInterface
 {
     public const AUTHORIZATION_GRANT = 'token';
 
     /**
-     * @var AccessToken
+     * @var TokenInterface
      */
     protected $accessToken;
 
@@ -44,6 +42,11 @@ class ImplicitGrant extends AbstractAuthorizationHandler implements Authorizatio
     protected $user;
 
     /**
+     * @var ClientInterface
+     */
+    protected $client;
+
+    /**
      * @var callable
      */
     protected $responseFactory;
@@ -58,14 +61,12 @@ class ImplicitGrant extends AbstractAuthorizationHandler implements Authorizatio
 
         $this->request = $request;
         $this->user = $user;
-        $this->accessToken = $this->generateAccessToken();
-        $this->redirectUri = $this->generateRedirectUri();
+        $this->client = $this->getClientById($this->request->getClientId());
 
-        try {
-            $this->accessTokenStorage->write($this->accessToken);
-        } catch (ParameterException $e) {
-            $this->responseData = $e->getMessages();
-        }
+        $accessToken = $this->generateAccessToken();
+        $this->tokenRepository->write($accessToken);
+
+        $this->redirectUri = $this->generateRedirectUri($accessToken);
 
         return new RedirectResponse($this->redirectUri);
     }
@@ -79,32 +80,30 @@ class ImplicitGrant extends AbstractAuthorizationHandler implements Authorizatio
 
     protected function generateAccessToken(): AccessToken
     {
-        $this->accessToken = TokenGenerator::generate(
-            AccessToken::class,
-            $this->user,
-            $this->getClientById($this->request->getClientId())
-        );
+        $tokenBuilder = new TokenBuilder();
+        /** @var AccessToken $accessToken */
+        $accessToken = $tokenBuilder
+            ->setTokenClass(AccessToken::class)
+            ->setIdentity($this->user)
+            ->setClient($this->client)
+            ->setExpirationTime($this->config['expiration_time'])
+            ->setIssuerIdentifier($this->config['issuer_identifier'])
+            ->generate();
 
-        return $this->accessToken;
+        return $accessToken;
     }
 
-    protected function generateRedirectUri(): UriInterface
+    protected function generateRedirectUri(AccessToken $accessToken): UriInterface
     {
-        if (! $this->hasGeneratedAccessToken()) {
-            throw new ParameterException();
-        }
+        $query = [
+            self::ACCESS_TOKEN_KEY => $accessToken->getValue(),
+            self::EXPIRES_IN_KEY => $accessToken->getExpires(),
+            self::EXPIRES_ON_KEY => (new \DateTime())->getTimestamp() + $accessToken->getExpires(),
+        ];
 
-        $redirectUri = $this->accessToken->getClient()->getRedirectUri();
-        $query = http_build_query([
-            self::ACCESS_TOKEN_KEY => $this->accessToken->getValue()
-        ]);
+        $redirectUri = $accessToken->getClient()->getRedirectUri();
 
-        return (new Uri($redirectUri))->withQuery($query);
-    }
-
-    protected function hasGeneratedAccessToken(): bool
-    {
-        return $this->accessToken instanceof AccessToken;
+        return (new Uri($redirectUri))->withQuery(http_build_query($query));
     }
 
     public function getAuthorizationRequestValidator(): AuthorizationRequestValidator

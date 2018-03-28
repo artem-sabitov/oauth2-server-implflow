@@ -4,15 +4,18 @@ declare(strict_types=1);
 
 namespace OAuth2\Handler;
 
+use OAuth2\ClientInterface;
 use OAuth2\Exception\ParameterException;
 use OAuth2\Exception\RuntimeException;
 use OAuth2\IdentityInterface;
+use OAuth2\Provider\ClientProviderInterface;
 use OAuth2\Request\AuthorizationRequest;
 use OAuth2\Token\AccessToken;
+use OAuth2\Token\TokenInterface;
 use OAuth2\Token\AuthorizationCode;
 use OAuth2\Token\RefreshToken;
-use OAuth2\Token\TokenGenerator;
-use OAuth2\Validator\AuthorizationRequestValidator;
+use OAuth2\Token\TokenBuilder;
+use OAuth2\TokenRepositoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
 use Zend\Diactoros\Response\JsonResponse;
@@ -28,21 +31,13 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
     public const AUTHORIZATION_CODE_KEY = 'code';
     public const REFRESH_TOKEN_KEY = 'refresh_token';
     public const TOKEN_TYPE_KEY = 'token_type';
-    public const EXPIRES_IN_KEY = 'expires_in';
-    public const EXPIRES_ON_KEY = 'expires_on';
-    public const GRANT_TYPE_KEY = 'grant_type';
-    public const CLIENT_ID_KEY = 'client_id';
-    public const CLIENT_SECRET_KEY = 'client_secret';
+
+    private const REFRESH_TOKEN_HASH_ALG = 'SHA256';
 
     /**
-     * @var AccessToken
+     * @var TokenInterface
      */
     protected $accessToken;
-
-    /**
-     * @var UriInterface
-     */
-    protected $redirectUri;
 
     /**
      * @var AuthorizationRequest
@@ -55,41 +50,14 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
     protected $user;
 
     /**
-     * @var AuthorizationCode
+     * @var ClientInterface
      */
-    protected $authorizationCode;
+    protected $client;
 
-    public function handle(IdentityInterface $user, AuthorizationRequest $request): ResponseInterface
-    {
-        $this->validate($request);
-
-        $this->request = $request;
-        $this->user = $user;
-
-        if ($request->getResponseType() === self::AUTHORIZATION_GRANT) {
-            $this->authorizationCode = $this->generateAuthorizationCode();
-            $this->redirectUri = $this->generateRedirectUri();
-
-            return new RedirectResponse($this->redirectUri);
-        }
-
-        if ($request->get(self::GRANT_TYPE_KEY) === self::SUPPORTED_GRANT_TYPE) {
-            $accessToken = $this->requestAccessTokenByCode($request);
-            $refreshToken = $this->generateRefreshToken($accessToken);
-
-            $payload = [
-                self::ACCESS_TOKEN_KEY => $accessToken->getValue(),
-                self::REFRESH_TOKEN_KEY => $refreshToken->getValue(),
-                self::TOKEN_TYPE_KEY => self::DEFAULT_TOKEN_TYPE,
-                self::EXPIRES_IN_KEY => $accessToken->getExpires(),
-                self::EXPIRES_ON_KEY => (new \DateTime())->getTimestamp() + $accessToken->getExpires(),
-            ];
-
-            return new JsonResponse($payload);
-        }
-
-        throw new RuntimeException("Handler {self::class} can not process authorization request");
-    }
+    /**
+     * @var TokenRepositoryInterface
+     */
+    protected $tokenRepository;
 
     public function canHandle(AuthorizationRequest $request): bool
     {
@@ -104,6 +72,60 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
         return false;
     }
 
+    public function handle(IdentityInterface $user, AuthorizationRequest $request): ResponseInterface
+    {
+        $this->validate($request);
+
+        $this->request = $request;
+        $this->user = $user;
+        $this->client = $this->getClientById($this->request->getClientId());
+
+        if ($request->getResponseType() === self::AUTHORIZATION_GRANT) {
+            return $this->handlePartOne();
+        }
+
+        if ($request->get(self::GRANT_TYPE_KEY) === self::SUPPORTED_GRANT_TYPE) {
+            $code = $request->get(self::AUTHORIZATION_CODE_KEY);
+            $authorizationCode = $this->tokenRepository->authorizeByCode($code);
+
+            return $this->handlePartTwo($authorizationCode);
+        }
+
+        throw new RuntimeException("Handler {self::class} can not process authorization request");
+    }
+
+    protected function handlePartOne() : ResponseInterface
+    {
+        /** @var AuthorizationCode $authorizationCode */
+        $authorizationCode = $this->generateAuthorizationCode();
+        $this->tokenRepository->write($authorizationCode);
+
+        $redirectUri = $this->generateRedirectUri($authorizationCode);
+
+        return new RedirectResponse($redirectUri);
+    }
+
+    protected function handlePartTwo(AuthorizationCode $authorizationCode) : ResponseInterface
+    {
+        // TODO @artem_sabitov implement authorization_code
+
+        $accessToken = $this->generateAccessToken();
+        $this->tokenRepository->write($accessToken);
+
+        $refreshToken = $this->generateRefreshToken($accessToken);
+        $this->tokenRepository->write($refreshToken);
+
+        $payload = [
+            self::ACCESS_TOKEN_KEY => $accessToken->getValue(),
+            self::REFRESH_TOKEN_KEY => $refreshToken->getValue(),
+            self::TOKEN_TYPE_KEY => self::DEFAULT_TOKEN_TYPE,
+            self::EXPIRES_IN_KEY => $accessToken->getExpires(),
+            self::EXPIRES_ON_KEY => (new \DateTime())->getTimestamp() + $accessToken->getExpires(),
+        ];
+
+        return new JsonResponse($payload);
+    }
+
     /**
      * @throws ParameterException
      */
@@ -112,89 +134,58 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
         // TODO @artem_sabitov implements method!
     }
 
-    protected function requestAccessTokenByCode(AuthorizationRequest $request): AccessToken
+    protected function generateAuthorizationCode(): TokenInterface
     {
-        $clientId = $request->get(self::CLIENT_ID_KEY);
-        $clientSecret = $request->get(self::CLIENT_SECRET_KEY);
-        $redirectUri = $request->get(self::REDIRECT_URI_KEY);
-        $code = $request->get(self::AUTHORIZATION_CODE_KEY);
+        $tokenBuilder = new TokenBuilder();
+        $authorizationCode = $tokenBuilder
+            ->setTokenClass(AuthorizationCode::class)
+            ->setIdentity($this->user)
+            ->setClient($this->client)
+            ->setExpirationTime($this->config['expiration_time'])
+            ->setIssuerIdentifier($this->config['issuer_identifier'])
+            ->generate();
 
-        // TODO @artem_sabitov authorization code grant implements!
-
-        return $this->generateAccessToken();
+        return $authorizationCode;
     }
 
-    protected function generateAuthorizationCode(): AuthorizationCode
+    protected function generateAccessToken(): TokenInterface
     {
-        $this->authorizationCode = TokenGenerator::generate(
-            AuthorizationCode::class,
-            $this->user,
-            $this->getClientById($this->request->getClientId())
-        );
-
-        return $this->authorizationCode;
-    }
-
-    protected function generateAccessToken(): AccessToken
-    {
-        $this->accessToken = TokenGenerator::generate(
-            AccessToken::class,
-            $this->user,
-            $this->getClientById($this->request->getClientId())
-        );
+        $tokenBuilder = new TokenBuilder();
+        $this->accessToken = $tokenBuilder
+            ->setTokenClass(AccessToken::class)
+            ->setIdentity($this->user)
+            ->setClient($this->client)
+            ->setExpirationTime($this->config['expiration_time'])
+            ->setIssuerIdentifier($this->config['issuer_identifier'])
+            ->generate();
 
         return $this->accessToken;
     }
 
-    protected function generateRefreshToken(AccessToken $accessToken): RefreshToken
+    protected function generateRefreshToken(TokenInterface $accessToken): RefreshToken
     {
-        $tokenString = TokenGenerator::generateAccessTokenString(
-            $this->user,
-            $this->getClientById($this->request->getClientId())
-        );
-        $expires = (int) TokenGenerator::generateExpiresAt();
+        $expires = $accessToken->getExpires() + $this->config['refresh_token_extra_time'];
+        $expires = (new \DateTime())
+            ->setTimestamp($expires)
+            ->getTimestamp();
 
-        return new RefreshToken($tokenString, $accessToken, $expires);
+        $refreshToken = new RefreshToken(
+            hash(self::REFRESH_TOKEN_HASH_ALG, $accessToken->getValue()),
+            $accessToken,
+            $expires
+        );
+
+        return $refreshToken;
     }
 
-    protected function generateRedirectUri(): UriInterface
+    protected function generateRedirectUri(AuthorizationCode $authorizationCode): UriInterface
     {
-        $redirectUri = null;
-        $query = [];
-
-        if ($this->hasAuthorizationCode()) {
-            $redirectUri = $this->authorizationCode->getClient()->getRedirectUri();
-            $query = http_build_query([
-                self::AUTHORIZATION_CODE_KEY => $this->authorizationCode->getValue()
-            ]);
-        }
-
-        if ($this->hasAccessToken()) {
-            $redirectUri = $this->accessToken->getClient()->getRedirectUri();
-            $query = http_build_query([
-                self::ACCESS_TOKEN_KEY  => $this->accessToken->getValue()
-            ]);
-        }
-
-        if ($redirectUri === null) {
-            throw new RuntimeException('Can not generate redirect_uri without \'code\' or \'access_token\'');
-        }
+        $redirectUri = $authorizationCode->getClient()->getRedirectUri();
+        $query = http_build_query([
+            self::AUTHORIZATION_CODE_KEY => $authorizationCode->getValue(),
+            // TODO @artem_sabitov return state from request
+        ]);
 
         return (new Uri($redirectUri))->withQuery($query);
-    }
-
-    protected function hasAuthorizationCode(): bool
-    {
-        return $this->authorizationCode instanceof AuthorizationCode;
-    }
-
-    protected function hasAccessToken(): bool
-    {
-        return $this->accessToken instanceof AccessToken;
-    }
-
-    public function getAuthorizationRequestValidator(): AuthorizationRequestValidator
-    {
-        return new AuthorizationRequestValidator();
     }
 }
