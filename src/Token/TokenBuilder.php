@@ -117,8 +117,8 @@ class TokenBuilder
     {
         $payload = [
             'iss' => $this->issuerIdentifier,
-            'sub' => $this->identity,
-            'aud' => $this->client,
+            'sub' => $this->identity->getIdentityId(),
+            'aud' => $this->client->getClientId(),
             'exp' => $expires,
             'auth_time' => (new DateTime())->getTimestamp(),
             'nonce' => self::generateState(),
