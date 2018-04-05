@@ -37,24 +37,18 @@ class AuthorizationRequest
 
     /**
      * AuthorizationRequest constructor.
-     * @param ServerRequestInterface $request
      */
     public function __construct(ServerRequestInterface $request)
     {
         $this->setParams($request->getQueryParams());
     }
 
-    /**
-     * @return string
-     */
     public function getClientId(): string
     {
         return $this->clientId;
     }
 
     /**
-     * @param string $clientId
-     * @return AuthorizationRequest
      * @throw InvalidArgumentException
      */
     public function withClientId(string $clientId): AuthorizationRequest
@@ -65,17 +59,12 @@ class AuthorizationRequest
         return $new;
     }
 
-    /**
-     * @return string
-     */
     public function getRedirectUri(): string
     {
         return $this->redirectUri;
     }
 
     /**
-     * @param string $redirectUri
-     * @return AuthorizationRequest
      * @throw InvalidArgumentException
      */
     public function withRedirectUri(string $redirectUri): AuthorizationRequest
@@ -86,17 +75,12 @@ class AuthorizationRequest
         return $new;
     }
 
-    /**
-     * @return string
-     */
     public function getResponseType(): string
     {
         return $this->responseType;
     }
 
     /**
-     * @param string $responseType
-     * @return AuthorizationRequest
      * @throw InvalidArgumentException
      */
     public function withResponseType(string $responseType): AuthorizationRequest
@@ -107,13 +91,9 @@ class AuthorizationRequest
         return $new;
     }
 
-    /**
-     * @param string $key
-     * @return string
-     */
-    public function get(string $key): string
+    public function get(string $key): ?string
     {
-        $value = '';
+        $value = null;
         if (isset($this->parameters[$key]) === true) {
             $value = $this->parameters[$key];
         }
@@ -121,9 +101,6 @@ class AuthorizationRequest
         return $value;
     }
 
-    /**
-     * @param array $params
-     */
     private function setParams(array $params): void
     {
         foreach ($params as $key => $value) {

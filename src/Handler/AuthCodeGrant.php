@@ -9,6 +9,9 @@ use OAuth2\Exception\ParameterException;
 use OAuth2\Exception\RuntimeException;
 use OAuth2\IdentityInterface;
 use OAuth2\Provider\ClientProviderInterface;
+use OAuth2\Repository\AccessTokenRepositoryInterface;
+use OAuth2\Repository\AuthorizationCodeRepositoryInterface;
+use OAuth2\Repository\RefreshTokenRepositoryInterface;
 use OAuth2\Request\AuthorizationRequest;
 use OAuth2\Token\AccessToken;
 use OAuth2\Token\TokenInterface;
@@ -25,11 +28,10 @@ use Zend\Diactoros\Uri;
 class AuthCodeGrant extends AbstractAuthorizationHandler implements AuthorizationHandlerInterface
 {
     public const AUTHORIZATION_GRANT = 'code';
-    public const SUPPORTED_GRANT_TYPE = 'authorization_code';
-    public const SUPPORTED_RESPONSE_TYPE = 'code';
-    public const DEFAULT_TOKEN_TYPE = 'Bearer';
     public const AUTHORIZATION_CODE_KEY = 'code';
-    public const REFRESH_TOKEN_KEY = 'refresh_token';
+    public const DEFAULT_TOKEN_TYPE = 'Bearer';
+    public const GRANT_TYPE_KEY = 'grant_type';
+    public const SUPPORTED_GRANT_TYPE = 'authorization_code';
     public const TOKEN_TYPE_KEY = 'token_type';
 
     private const REFRESH_TOKEN_HASH_ALG = 'SHA256';
@@ -37,39 +39,59 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
     /**
      * @var TokenInterface
      */
-    protected $accessToken;
+    private $accessToken;
 
     /**
      * @var AuthorizationRequest
      */
-    protected $request;
+    private $request;
 
     /**
      * @var IdentityInterface
      */
-    protected $user;
+    private $user;
 
     /**
      * @var ClientInterface
      */
-    protected $client;
+    private $client;
 
     /**
-     * @var TokenRepositoryInterface
+     * @var AuthorizationCodeRepositoryInterface
      */
-    protected $tokenRepository;
+    private $codeRepository;
+
+    /**
+     * @var RefreshTokenRepositoryInterface
+     */
+    private $refreshTokenRepository;
+
+    public function __construct(
+        array $config,
+        ClientProviderInterface $clientProvider,
+        AccessTokenRepositoryInterface $accessTokenRepository,
+        RefreshTokenRepositoryInterface $refreshTokenRepository,
+        AuthorizationCodeRepositoryInterface $codeRepository
+    ) {
+        $this->codeRepository = $codeRepository;
+        $this->refreshTokenRepository = $refreshTokenRepository;
+        parent::__construct($config, $clientProvider, $accessTokenRepository);
+    }
 
     public function canHandle(AuthorizationRequest $request): bool
     {
-        if ($request->get(self::GRANT_TYPE_KEY) === self::SUPPORTED_GRANT_TYPE) {
-            return true;
-        }
+        return $this->isRequestAuthorizationCode($request) ||
+            $this->isRequestAccessTokenByCode($request);
+    }
 
-        if ($request->get(self::RESPONSE_TYPE_KEY) === self::AUTHORIZATION_GRANT) {
-            return true;
-        }
+    private function isRequestAuthorizationCode(AuthorizationRequest $request): bool
+    {
+        return $request->get(self::RESPONSE_TYPE_KEY) === self::AUTHORIZATION_GRANT;
+    }
 
-        return false;
+    private function isRequestAccessTokenByCode(AuthorizationRequest $request): bool
+    {
+        return $request->get(self::GRANT_TYPE_KEY) === self::SUPPORTED_GRANT_TYPE;
     }
 
     public function handle(IdentityInterface $user, AuthorizationRequest $request): ResponseInterface
@@ -80,40 +102,48 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
         $this->user = $user;
         $this->client = $this->getClientById($this->request->getClientId());
 
-        if ($request->getResponseType() === self::AUTHORIZATION_GRANT) {
+        if ($this->isRequestAuthorizationCode($request)) {
             return $this->handlePartOne();
         }
 
-        if ($request->get(self::GRANT_TYPE_KEY) === self::SUPPORTED_GRANT_TYPE) {
+        if ($this->isRequestAccessTokenByCode($request)) {
             $code = $request->get(self::AUTHORIZATION_CODE_KEY);
-            $authorizationCode = $this->tokenRepository->authorizeByCode($code);
+            if ($code === null) {
+                throw (new ParameterException())->withMessages([
+                    self::AUTHORIZATION_CODE_KEY =>
+                        'Authorization code was not provided'
+                ]);
+            }
 
-            return $this->handlePartTwo($authorizationCode);
+            return $this->handlePartTwo($code);
         }
 
-        throw new RuntimeException("Handler {self::class} can not process authorization request");
+        throw new RuntimeException(sprintf(
+            'Handler \'%s\' can not process authorization request',
+            self::class
+        ));
     }
 
     protected function handlePartOne() : ResponseInterface
     {
-        /** @var AuthorizationCode $authorizationCode */
-        $authorizationCode = $this->generateAuthorizationCode();
-        $this->tokenRepository->write($authorizationCode);
+        $code = $this->generateAuthorizationCode();
+        $this->codeRepository->write($code);
 
-        $redirectUri = $this->generateRedirectUri($authorizationCode);
-
-        return new RedirectResponse($redirectUri);
+        return new RedirectResponse(
+            $this->generateRedirectUri($code)
+        );
     }
 
-    protected function handlePartTwo(AuthorizationCode $authorizationCode) : ResponseInterface
+    protected function handlePartTwo(string $code) : ResponseInterface
     {
-        // TODO @artem_sabitov implement authorization_code
+        $code = $this->codeRepository->find($code);
+        $this->validateAuthorizationCode($code);
 
         $accessToken = $this->generateAccessToken();
-        $this->tokenRepository->write($accessToken);
+        $this->accessTokenRepository->write($accessToken);
 
         $refreshToken = $this->generateRefreshToken($accessToken);
-        $this->tokenRepository->write($refreshToken);
+        $this->refreshTokenRepository->write($refreshToken);
 
         $payload = [
             self::ACCESS_TOKEN_KEY => $accessToken->getValue(),
@@ -127,6 +157,27 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
     }
 
     /**
+     * throws Exception\ParameterException
+     */
+    private function validateAuthorizationCode(?AuthorizationCode $code): void
+    {
+        if ($code === null) {
+            throw (new ParameterException())->withMessages([
+                self::AUTHORIZATION_CODE_KEY =>
+                    'The provided authorization code cannot be used'
+            ]);
+        }
+
+        $now = (new \DateTime())->getTimestamp();
+        if ($code->getExpires() <= $now) {
+            throw (new ParameterException())->withMessages([
+                self::AUTHORIZATION_CODE_KEY =>
+                    'The provided authorization code is expired'
+            ]);
+        }
+    }
+
+    /**
      * @throws ParameterException
      */
     protected function validate(AuthorizationRequest $request): void
@@ -134,9 +185,11 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
         // TODO @artem_sabitov implements method!
     }
 
-    protected function generateAuthorizationCode(): TokenInterface
+    protected function generateAuthorizationCode(): AuthorizationCode
     {
         $tokenBuilder = new TokenBuilder();
+
+        /** @var AuthorizationCode $authorizationCode */
         $authorizationCode = $tokenBuilder
             ->setTokenClass(AuthorizationCode::class)
             ->setIdentity($this->user)
@@ -148,10 +201,12 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
         return $authorizationCode;
     }
 
-    protected function generateAccessToken(): TokenInterface
+    protected function generateAccessToken(): AccessToken
     {
         $tokenBuilder = new TokenBuilder();
-        $this->accessToken = $tokenBuilder
+
+        /** @var AccessToken $accessToken */
+        $accessToken = $tokenBuilder
             ->setTokenClass(AccessToken::class)
             ->setIdentity($this->user)
             ->setClient($this->client)
@@ -159,7 +214,7 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
             ->setIssuerIdentifier($this->config['issuer_identifier'])
             ->generate();
 
-        return $this->accessToken;
+        return $accessToken;
     }
 
     protected function generateRefreshToken(TokenInterface $accessToken): RefreshToken

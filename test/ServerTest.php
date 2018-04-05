@@ -4,21 +4,25 @@ declare(strict_types=1);
 
 namespace OAuth2Test;
 
+use OAuth2\ClientInterface;
 use OAuth2\ConfigProvider;
 use OAuth2\Exception\InvalidConfigException;
-use OAuth2\Exception\RuntimeException;
 use OAuth2\Handler\AuthCodeGrant;
 use OAuth2\Handler\ImplicitGrant;
 use OAuth2\IdentityInterface;
+use OAuth2\Repository\AccessTokenRepositoryInterface;
+use OAuth2\Repository\AuthorizationCodeRepositoryInterface;
+use OAuth2\Repository\RefreshTokenRepositoryInterface;
 use OAuth2\Request\AuthorizationRequest;
 use OAuth2\Provider\ClientProviderInterface;
 use OAuth2\Provider\IdentityProviderInterface;
 use OAuth2\Server;
 use OAuth2\ServerInterface;
-use OAuth2\TokenRepositoryInterface;
+use OAuth2\Token\AuthorizationCode;
 use OAuth2Test\Assets\TestClientProvider;
 use OAuth2Test\Assets\TestSuccessIdentityProvider;
 use PHPUnit\Framework\TestCase;
+use Prophecy\Argument;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Zend\Diactoros\Response;
@@ -49,16 +53,6 @@ class ServerTest extends TestCase
      */
     private $clientProvider;
 
-    /**
-     * @var TokenRepositoryInterface
-     */
-    private $tokenRepository;
-
-    /**
-     * @var array
-     */
-    private $authorizationHandlers;
-
     protected function setUp()
     {
         /** @var array $config */
@@ -74,7 +68,6 @@ class ServerTest extends TestCase
 
         $this->identityProvider = new TestSuccessIdentityProvider();
         $this->clientProvider = new TestClientProvider();
-        $this->tokenRepository = $this->createMock(TokenRepositoryInterface::class);
     }
 
     public function getServer(): ServerInterface
@@ -84,13 +77,14 @@ class ServerTest extends TestCase
 
     public function registerImplicitGrantHandler(ServerInterface $server): ServerInterface
     {
+        $tokenRepository = $this->createMock(AccessTokenRepositoryInterface::class);
         $handler = new ImplicitGrant(
             [
                 'expiration_time' => 60 * 60,
                 'issuer_identifier' => 'test_server',
             ],
             $this->clientProvider,
-            $this->tokenRepository
+            $tokenRepository
         );
 
         return $server->registerHandler('token', $handler);
@@ -98,6 +92,26 @@ class ServerTest extends TestCase
 
     public function registerAuthCodeGrantHandler(ServerInterface $server): ServerInterface
     {
+        $testCode = new AuthorizationCode(
+            'test',
+            $this->createMock(IdentityInterface::class),
+            $this->createMock(ClientInterface::class),
+            (new \DateTime())->modify('+1 day')->getTimestamp()
+        );
+        $expiredCode = new AuthorizationCode(
+            'expired',
+            $this->createMock(IdentityInterface::class),
+            $this->createMock(ClientInterface::class),
+            1522540800
+        );
+
+        $accessTokenRepository = $this->createMock(AccessTokenRepositoryInterface::class);
+        $refreshTokenRepository = $this->createMock(RefreshTokenRepositoryInterface::class);
+        $codeRepository = $this->prophesize(AuthorizationCodeRepositoryInterface::class);
+        $codeRepository->find('test')->willReturn($testCode);
+        $codeRepository->find('expired')->willReturn($expiredCode);
+        $codeRepository->find('')->willReturn(null);
+        $codeRepository->write(Argument::any())->will(function () { return; });
         $handler = new AuthCodeGrant(
             [
                 'expiration_time' => 60 * 60,
@@ -105,7 +119,9 @@ class ServerTest extends TestCase
                 'refresh_token_extra_time' => 60 * 60,
             ],
             $this->clientProvider,
-            $this->tokenRepository
+            $accessTokenRepository,
+            $refreshTokenRepository,
+            $codeRepository->reveal()
         );
 
         return $server->registerHandler('code', $handler);
@@ -409,10 +425,8 @@ class ServerTest extends TestCase
         $this->assertNotEmpty($code);
     }
 
-    public function testRequestWithCorrectAuthorizationCodeReturnAccessToken()
+    public function testRequestWithoutAuthorizationCodeReturnError()
     {
-        $server = $this->getServer();
-
         $serverRequest = new Request(
             [],
             [],
@@ -423,6 +437,93 @@ class ServerTest extends TestCase
             [],
             [
                 'grant_type' => 'authorization_code',
+                'client_id' => 'test',
+                'client_secret' => 'secret',
+                'redirect_uri' => 'http://example.com',
+            ]
+        );
+
+        $server = $this->registerAuthCodeGrantHandler($this->getServer());
+        $response = $server->authorize($this->getUser(), $serverRequest);
+
+        $this->assertInstanceOf(Response\JsonResponse::class, $response);
+        $this->assertEquals(
+            '{"code":400,"errors":{"code":"Authorization code was not provided"}}',
+            $response->getBody()->getContents()
+        );
+    }
+
+    public function testRequestWithEmptyAuthorizationCodeReturnError()
+    {
+        $serverRequest = new Request(
+            [],
+            [],
+            'http://example.com/',
+            'GET',
+            'php://memory',
+            [],
+            [],
+            [
+                'grant_type' => 'authorization_code',
+                'code' => '',
+                'client_id' => 'test',
+                'client_secret' => 'secret',
+                'redirect_uri' => 'http://example.com',
+            ]
+        );
+
+        $server = $this->registerAuthCodeGrantHandler($this->getServer());
+        $response = $server->authorize($this->getUser(), $serverRequest);
+
+        $this->assertInstanceOf(Response\JsonResponse::class, $response);
+        $this->assertEquals(
+            '{"code":400,"errors":{"code":"The provided authorization code cannot be used"}}',
+            $response->getBody()->getContents()
+        );
+    }
+
+    public function testRequestWithExpiredAuthorizationCodeReturnError()
+    {
+        $serverRequest = new Request(
+            [],
+            [],
+            'http://example.com/',
+            'GET',
+            'php://memory',
+            [],
+            [],
+            [
+                'grant_type' => 'authorization_code',
+                'code' => 'expired',
+                'client_id' => 'test',
+                'client_secret' => 'secret',
+                'redirect_uri' => 'http://example.com',
+            ]
+        );
+
+        $server = $this->registerAuthCodeGrantHandler($this->getServer());
+        $response = $server->authorize($this->getUser(), $serverRequest);
+
+        $this->assertInstanceOf(Response\JsonResponse::class, $response);
+        $this->assertEquals(
+            '{"code":400,"errors":{"code":"The provided authorization code is expired"}}',
+            $response->getBody()->getContents()
+        );
+    }
+
+    public function testRequestWithCorrectAuthorizationCodeReturnAccessToken()
+    {
+        $serverRequest = new Request(
+            [],
+            [],
+            'http://example.com/',
+            'GET',
+            'php://memory',
+            [],
+            [],
+            [
+                'grant_type' => 'authorization_code',
+                'code' => 'test',
                 'client_id' => 'test',
                 'client_secret' => 'secret',
                 'redirect_uri' => 'http://example.com',

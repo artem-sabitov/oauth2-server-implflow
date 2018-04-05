@@ -8,6 +8,7 @@ use OAuth2\Exception;
 use OAuth2\Factory\ImplicitHandlerFactory;
 use OAuth2\Handler\ImplicitGrant;
 use OAuth2\Provider\ClientProviderInterface;
+use OAuth2\Repository\AccessTokenRepositoryInterface;
 use OAuth2\TokenRepositoryInterface;
 use PHPUnit\Framework\TestCase;
 use Prophecy\Prophecy\ObjectProphecy;
@@ -25,29 +26,25 @@ class ImplicitHandlerFactoryTest extends TestCase
      */
     private $factory;
 
-    /**
-     * @var ClientProviderInterface
-     */
-    private $clientProvider;
-
-    /**
-     * @var TokenRepositoryInterface
-     */
-    private $tokenRepository;
-
     protected function setUp()
     {
         $this->container = $this->prophesize(ContainerInterface::class);
         $this->factory = new ImplicitHandlerFactory();
-        $this->clientProvider = $this->prophesize(ClientProviderInterface::class);
-        $this->tokenRepository = $this->prophesize(TokenRepositoryInterface::class);
+        $clientProvider = $this->prophesize(ClientProviderInterface::class);
+        $tokenRepository = $this->prophesize(AccessTokenRepositoryInterface::class);
 
         $this->container
             ->get(ClientProviderInterface::class)
-            ->willReturn($this->clientProvider);
+            ->willReturn($clientProvider);
         $this->container
-            ->get(TokenRepositoryInterface::class)
-            ->willReturn($this->tokenRepository);
+            ->has(ClientProviderInterface::class)
+            ->willReturn(true);
+        $this->container
+            ->get(AccessTokenRepositoryInterface::class)
+            ->willReturn($tokenRepository->reveal());
+        $this->container
+            ->has(AccessTokenRepositoryInterface::class)
+            ->willReturn(true);
     }
 
     public function testFactoryWithoutConfig()
@@ -76,7 +73,7 @@ class ImplicitHandlerFactoryTest extends TestCase
                 'implicit_flow' => [],
             ],
         ]);
-        $this->container->has(ClientProviderInterface::class)->willReturn(false);
+        $this->container->has($dependency)->willReturn(false);
         $this->expectException(Exception\InvalidConfigException::class);
         $this->expectExceptionMessage(sprintf(
             'Cannot create %s handler; dependency %s is missing',
@@ -89,15 +86,14 @@ class ImplicitHandlerFactoryTest extends TestCase
     public function testFactoryWithoutTokenRepository()
     {
         $handler = ImplicitGrant::class;
-        $dependency = TokenRepositoryInterface::class;
+        $dependency = AccessTokenRepositoryInterface::class;
 
         $this->container->get('config')->willReturn([
             'oauth2' => [
                 'implicit_flow' => [],
             ],
         ]);
-        $this->container->has(ClientProviderInterface::class)->willReturn(true);
-        $this->container->has(TokenRepositoryInterface::class)->willReturn(false);
+        $this->container->has($dependency)->willReturn(false);
         $this->expectException(Exception\InvalidConfigException::class);
         $this->expectExceptionMessage(sprintf(
             'Cannot create %s handler; dependency %s is missing',
@@ -114,8 +110,6 @@ class ImplicitHandlerFactoryTest extends TestCase
                 'implicit_flow' => [],
             ],
         ]);
-        $this->container->has(ClientProviderInterface::class)->willReturn(true);
-        $this->container->has(TokenRepositoryInterface::class)->willReturn(true);
         $server = ($this->factory)($this->container->reveal());
         $this->assertInstanceOf(ImplicitGrant::class, $server);
     }

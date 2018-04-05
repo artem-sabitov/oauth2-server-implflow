@@ -6,6 +6,7 @@ use OAuth2\ClientInterface;
 use OAuth2\IdentityInterface;
 use OAuth2\Provider\ClientProviderInterface;
 use OAuth2\Provider\IdentityProviderInterface;
+use OAuth2\Repository\AccessTokenRepositoryInterface;
 use OAuth2\Request\AuthorizationRequest;
 use OAuth2\TokenRepositoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -15,13 +16,13 @@ abstract class AbstractAuthorizationHandler
     public const AUTHORIZATION_GRANT = '';
     public const REDIRECT_URI_KEY = 'redirect_uri';
     public const RESPONSE_TYPE_KEY = 'response_type';
-    public const ACCESS_TOKEN_KEY = 'access_token';
-    public const EXPIRES_IN_KEY = 'expires_in';
-    public const EXPIRES_ON_KEY = 'expires_on';
-    public const GRANT_TYPE_KEY = 'grant_type';
     public const CLIENT_ID_KEY = 'client_id';
     public const CLIENT_SECRET_KEY = 'client_secret';
     public const STATE_KEY = 'state';
+    public const ACCESS_TOKEN_KEY = 'access_token';
+    public const REFRESH_TOKEN_KEY = 'refresh_token';
+    public const EXPIRES_IN_KEY = 'expires_in';
+    public const EXPIRES_ON_KEY = 'expires_on';
 
     /**
      * @var array
@@ -39,9 +40,9 @@ abstract class AbstractAuthorizationHandler
     protected $clientProvider;
 
     /**
-     * @var TokenRepositoryInterface
+     * @var AccessTokenRepositoryInterface
      */
-    protected $tokenRepository;
+    protected $accessTokenRepository;
 
     /**
      * AbstractGrantType constructor.
@@ -51,11 +52,11 @@ abstract class AbstractAuthorizationHandler
     public function __construct(
         array $config,
         ClientProviderInterface $clientProvider,
-        TokenRepositoryInterface $tokenRepository
+        AccessTokenRepositoryInterface $accessTokenRepository
     ) {
         $this->config = $config;
         $this->clientProvider = $clientProvider;
-        $this->tokenRepository = $tokenRepository;
+        $this->accessTokenRepository = $accessTokenRepository;
     }
 
     abstract public function canHandle(AuthorizationRequest $request): bool;

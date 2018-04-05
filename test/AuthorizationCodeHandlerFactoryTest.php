@@ -10,6 +10,9 @@ use OAuth2\Factory\ImplicitHandlerFactory;
 use OAuth2\Handler\AuthCodeGrant;
 use OAuth2\Handler\ImplicitGrant;
 use OAuth2\Provider\ClientProviderInterface;
+use OAuth2\Repository\AccessTokenRepositoryInterface;
+use OAuth2\Repository\AuthorizationCodeRepositoryInterface;
+use OAuth2\Repository\RefreshTokenRepositoryInterface;
 use OAuth2\TokenRepositoryInterface;
 use PHPUnit\Framework\TestCase;
 use Prophecy\Prophecy\ObjectProphecy;
@@ -27,29 +30,39 @@ class AuthorizationCodeHandlerFactoryTest extends TestCase
      */
     private $factory;
 
-    /**
-     * @var ClientProviderInterface
-     */
-    private $clientProvider;
-
-    /**
-     * @var TokenRepositoryInterface
-     */
-    private $tokenRepository;
-
     protected function setUp()
     {
         $this->container = $this->prophesize(ContainerInterface::class);
         $this->factory = new AuthorizationCodeHandlerFactory();
-        $this->clientProvider = $this->prophesize(ClientProviderInterface::class);
-        $this->tokenRepository = $this->prophesize(TokenRepositoryInterface::class);
+        $clientProvider = $this->prophesize(ClientProviderInterface::class);
+        $accessTokenRepository = $this->prophesize(AccessTokenRepositoryInterface::class);
+        $refreshTokenRepository = $this->prophesize(RefreshTokenRepositoryInterface::class);
+        $codeRepository = $this->prophesize(AuthorizationCodeRepositoryInterface::class);
 
         $this->container
             ->get(ClientProviderInterface::class)
-            ->willReturn($this->clientProvider);
+            ->willReturn($clientProvider->reveal());
         $this->container
-            ->get(TokenRepositoryInterface::class)
-            ->willReturn($this->tokenRepository);
+            ->has(ClientProviderInterface::class)
+            ->willReturn(true);
+        $this->container
+            ->get(AccessTokenRepositoryInterface::class)
+            ->willReturn($accessTokenRepository->reveal());
+        $this->container
+            ->has(AccessTokenRepositoryInterface::class)
+            ->willReturn(true);
+        $this->container
+            ->get(RefreshTokenRepositoryInterface::class)
+            ->willReturn($refreshTokenRepository->reveal());
+        $this->container
+            ->has(RefreshTokenRepositoryInterface::class)
+            ->willReturn(true);
+        $this->container
+            ->get(AuthorizationCodeRepositoryInterface::class)
+            ->willReturn($codeRepository->reveal());
+        $this->container
+            ->has(AuthorizationCodeRepositoryInterface::class)
+            ->willReturn(true);
     }
 
     public function testFactoryWithoutConfig()
@@ -86,7 +99,7 @@ class AuthorizationCodeHandlerFactoryTest extends TestCase
                 'authorization_code_flow' => [],
             ],
         ]);
-        $this->container->has(ClientProviderInterface::class)->willReturn(false);
+        $this->container->has($dependency)->willReturn(false);
         $this->expectException(Exception\InvalidConfigException::class);
         $this->expectExceptionMessage(sprintf(
             'Cannot create %s handler; dependency %s is missing',
@@ -96,22 +109,49 @@ class AuthorizationCodeHandlerFactoryTest extends TestCase
         ($this->factory)($this->container->reveal());
     }
 
-    public function testFactoryWithoutTokenRepository()
+    public function testFactoryWithoutAccessTokenRepository()
     {
-        $handler = AuthCodeGrant::class;
-        $dependency = TokenRepositoryInterface::class;
-
         $this->container->get('config')->willReturn([
             'oauth2' => [
                 'authorization_code_flow' => [],
             ],
         ]);
-        $this->container->has(ClientProviderInterface::class)->willReturn(true);
-        $this->container->has(TokenRepositoryInterface::class)->willReturn(false);
+        $this->runTestWithoutDependency(
+            AccessTokenRepositoryInterface::class
+        );
+    }
+
+    public function testFactoryWithoutRefreshTokenRepository()
+    {
+        $this->container->get('config')->willReturn([
+            'oauth2' => [
+                'authorization_code_flow' => [],
+            ],
+        ]);
+        $this->runTestWithoutDependency(
+            RefreshTokenRepositoryInterface::class
+        );
+    }
+
+    public function testFactoryWithoutCodeRepository()
+    {
+        $this->container->get('config')->willReturn([
+            'oauth2' => [
+                'authorization_code_flow' => [],
+            ],
+        ]);
+        $this->runTestWithoutDependency(
+            AuthorizationCodeRepositoryInterface::class
+        );
+    }
+
+    private function runTestWithoutDependency(string $dependency)
+    {
+        $this->container->has($dependency)->willReturn(false);
         $this->expectException(Exception\InvalidConfigException::class);
         $this->expectExceptionMessage(sprintf(
             'Cannot create %s handler; dependency %s is missing',
-            $handler,
+            AuthCodeGrant::class,
             $dependency
         ));
         ($this->factory)($this->container->reveal());
@@ -124,8 +164,6 @@ class AuthorizationCodeHandlerFactoryTest extends TestCase
                 'authorization_code_flow' => [],
             ],
         ]);
-        $this->container->has(ClientProviderInterface::class)->willReturn(true);
-        $this->container->has(TokenRepositoryInterface::class)->willReturn(true);
         $server = ($this->factory)($this->container->reveal());
         $this->assertInstanceOf(AuthCodeGrant::class, $server);
     }
