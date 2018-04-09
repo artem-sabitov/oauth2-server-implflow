@@ -7,9 +7,8 @@ namespace OAuth2\Validator;
 use OAuth2\Request\AuthorizationRequest;
 use OAuth2\Exception\ParameterException;
 use OAuth2\Messages;
-use Zend\Stdlib\ArrayUtils;
 
-class AuthorizationRequestValidator
+class AuthorizationCodeRequestValidator
 {
     const INVALID_PARAMETER = 1;
     const MISSING_PARAMETER = 2;

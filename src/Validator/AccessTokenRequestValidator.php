@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace OAuth2\Validator;
 
+use OAuth2\Handler\AuthCodeGrant;
 use OAuth2\Request\AuthorizationRequest;
 use OAuth2\Exception\ParameterException;
 use OAuth2\Messages;
-use Zend\Stdlib\ArrayUtils;
 
-class AuthorizationRequestValidator
+class AccessTokenRequestValidator
 {
     const INVALID_PARAMETER = 1;
     const MISSING_PARAMETER = 2;
@@ -62,11 +62,24 @@ class AuthorizationRequestValidator
 
     public function isValid(AuthorizationRequest $request): bool
     {
+        $isValidGrantType = $this->validateGrantType($request);
         $isValidClientId = $this->validateClientId($request);
+        $isValidCode = $this->validateCode($request);
         $isValidRedirectUri = $this->validateRedirectUri($request);
-        $isValidResponseType = $this->validateResponseType($request);
 
-        return $isValidClientId && $isValidRedirectUri && $isValidResponseType;
+        return $isValidGrantType && $isValidClientId && $isValidCode && $isValidRedirectUri;
+    }
+
+    public function validateGrantType(AuthorizationRequest $request): bool
+    {
+        if ($request->get(AuthCodeGrant::GRANT_TYPE_KEY) === '') {
+            $key = AuthCodeGrant::GRANT_TYPE_KEY;
+            $this->addErrorMessage($key, $this->buildMissingParameterMessage($key));
+
+            return false;
+        }
+
+        return true;
     }
 
     public function validateClientId(AuthorizationRequest $request): bool
@@ -81,22 +94,22 @@ class AuthorizationRequestValidator
         return true;
     }
 
-    public function validateRedirectUri(AuthorizationRequest $request): bool
+    public function validateCode(AuthorizationRequest $request): bool
     {
-        if ($request->getRedirectUri() === '') {
-            $key = AuthorizationRequest::REDIRECT_URI_KEY;
+        $code = $request->get(AuthCodeGrant::AUTHORIZATION_CODE_KEY);
+        if ($code === null) {
+            $key = AuthCodeGrant::AUTHORIZATION_CODE_KEY;
             $this->addErrorMessage($key, $this->buildMissingParameterMessage($key));
-
             return false;
         }
 
         return true;
     }
 
-    public function validateResponseType(AuthorizationRequest $request): bool
+    public function validateRedirectUri(AuthorizationRequest $request): bool
     {
-        if ($request->getResponseType() === '') {
-            $key = AuthorizationRequest::RESPONSE_TYPE_KEY;
+        if ($request->getRedirectUri() === '') {
+            $key = AuthorizationRequest::REDIRECT_URI_KEY;
             $this->addErrorMessage($key, $this->buildMissingParameterMessage($key));
 
             return false;

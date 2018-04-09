@@ -19,6 +19,8 @@ use OAuth2\Token\AuthorizationCode;
 use OAuth2\Token\RefreshToken;
 use OAuth2\Token\TokenBuilder;
 use OAuth2\TokenRepositoryInterface;
+use OAuth2\Validator\AccessTokenRequestValidator;
+use OAuth2\Validator\AuthorizationCodeRequestValidator;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
 use Zend\Diactoros\Response\JsonResponse;
@@ -96,32 +98,56 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
 
     public function handle(IdentityInterface $user, AuthorizationRequest $request): ResponseInterface
     {
-        $this->validate($request);
-
         $this->request = $request;
         $this->user = $user;
-        $this->client = $this->getClientById($this->request->getClientId());
 
         if ($this->isRequestAuthorizationCode($request)) {
+            $validator = $this->getAuthorizationCodeRequestValidator();
+            if ($validator->validate($request) === false) {
+                $messages = $validator->getErrorMessages();
+                throw ParameterException::create($messages);
+            }
+
+            $this->client = $this->getClientById($this->request->getClientId());
+
             return $this->handlePartOne();
         }
 
         if ($this->isRequestAccessTokenByCode($request)) {
+            $validator = $this->getAccessTokenRequestValidator();
+            if ($validator->validate($request) === false) {
+                $messages = $validator->getErrorMessages();
+                throw ParameterException::create($messages);
+            }
+
             $code = $request->get(self::AUTHORIZATION_CODE_KEY);
-            if ($code === null) {
+            $authorizationCode = $this->codeRepository->find($code);
+            if ($authorizationCode === null) {
                 throw (new ParameterException())->withMessages([
                     self::AUTHORIZATION_CODE_KEY =>
-                        'Authorization code was not provided'
+                        'The provided authorization code cannot be used'
                 ]);
             }
 
-            return $this->handlePartTwo($code);
+            $this->client = $this->getClientById($this->request->getClientId());
+
+            return $this->handlePartTwo($authorizationCode);
         }
 
         throw new RuntimeException(sprintf(
             'Handler \'%s\' can not process authorization request',
             self::class
         ));
+    }
+
+    private function getAuthorizationCodeRequestValidator() : AuthorizationCodeRequestValidator
+    {
+        return new AuthorizationCodeRequestValidator();
+    }
+
+    private function getAccessTokenRequestValidator() : AccessTokenRequestValidator
+    {
+        return new AccessTokenRequestValidator();
     }
 
     protected function handlePartOne() : ResponseInterface
@@ -134,16 +160,8 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
         );
     }
 
-    protected function handlePartTwo(string $code) : ResponseInterface
+    protected function handlePartTwo(AuthorizationCode $authorizationCode) : ResponseInterface
     {
-        $authorizationCode = $this->codeRepository->find($code);
-        if ($authorizationCode === null) {
-            throw (new ParameterException())->withMessages([
-                self::AUTHORIZATION_CODE_KEY =>
-                    'The provided authorization code cannot be used'
-            ]);
-        }
-
         $this->validateAuthorizationCode($authorizationCode);
         $authorizationCode->setUsed(true);
         $this->codeRepository->write($authorizationCode);

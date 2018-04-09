@@ -457,7 +457,7 @@ class ServerTest extends TestCase
 
         $this->assertInstanceOf(Response\JsonResponse::class, $response);
         $this->assertEquals(
-            '{"code":400,"errors":{"code":"Authorization code was not provided"}}',
+            '{"code":400,"errors":{"code":"Required parameter \u0027code\u0027 is missing"}}',
             $response->getBody()->getContents()
         );
     }
@@ -535,7 +535,7 @@ class ServerTest extends TestCase
                 'code' => 'used',
                 'client_id' => 'test',
                 'client_secret' => 'secret',
-                'redirect_uri' => 'http://example.com',
+                'redirect_uri' => 'myapp://',
             ]
         );
 
