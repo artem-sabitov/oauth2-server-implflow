@@ -24,7 +24,7 @@ class RefreshToken extends AbstractExpiresToken
      */
     public function __construct(
         string $refreshToken,
-        TokenInterface $accessToken,
+        AccessToken $accessToken,
         int $expires
     ) {
         $this->refreshToken = $refreshToken;
@@ -42,5 +42,13 @@ class RefreshToken extends AbstractExpiresToken
     public function getValue(): string
     {
         return $this->refreshToken;
+    }
+
+    /**
+     * @return string
+     */
+    public function getAccessToken(): string
+    {
+        return $this->accessToken;
     }
 }
