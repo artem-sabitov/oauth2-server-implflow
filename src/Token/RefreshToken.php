@@ -13,14 +13,15 @@ class RefreshToken extends AbstractExpiresToken
     protected $refreshToken;
 
     /**
-     * @var string
+     * @var AccessToken
      */
     protected $accessToken;
 
     /**
-     * AccessToken constructor.
-     * @param IdentityInterface $identity
-     * @param ClientInterface $client
+     * RefreshToken constructor.
+     * @param string $refreshToken
+     * @param AccessToken $accessToken
+     * @param int $expires
      */
     public function __construct(
         string $refreshToken,
@@ -36,18 +37,12 @@ class RefreshToken extends AbstractExpiresToken
         );
     }
 
-    /**
-     * @return string
-     */
     public function getValue(): string
     {
         return $this->refreshToken;
     }
 
-    /**
-     * @return string
-     */
-    public function getAccessToken(): string
+    public function getAccessToken(): AccessToken
     {
         return $this->accessToken;
     }
