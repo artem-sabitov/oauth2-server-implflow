@@ -104,13 +104,22 @@ class ServerTest extends TestCase
             $this->createMock(ClientInterface::class),
             1522540800
         );
+        $usedCode = new AuthorizationCode(
+            'expired',
+            $this->createMock(IdentityInterface::class),
+            $this->createMock(ClientInterface::class),
+            1522540800
+        );
+        $usedCode->setUsed(true);
 
         $accessTokenRepository = $this->createMock(AccessTokenRepositoryInterface::class);
         $refreshTokenRepository = $this->createMock(RefreshTokenRepositoryInterface::class);
         $codeRepository = $this->prophesize(AuthorizationCodeRepositoryInterface::class);
         $codeRepository->find('test')->willReturn($testCode);
         $codeRepository->find('expired')->willReturn($expiredCode);
+        $codeRepository->find('used')->willReturn($usedCode);
         $codeRepository->find('')->willReturn(null);
+        $codeRepository->find(null)->willReturn(null);
         $codeRepository->write(Argument::any())->will(function () { return; });
         $handler = new AuthCodeGrant(
             [
@@ -507,6 +516,35 @@ class ServerTest extends TestCase
         $this->assertInstanceOf(Response\JsonResponse::class, $response);
         $this->assertEquals(
             '{"code":400,"errors":{"code":"The provided authorization code is expired"}}',
+            $response->getBody()->getContents()
+        );
+    }
+
+    public function testRequestWithUsedAuthorizationCodeReturnError()
+    {
+        $serverRequest = new Request(
+            [],
+            [],
+            'http://example.com/',
+            'GET',
+            'php://memory',
+            [],
+            [],
+            [
+                'grant_type' => 'authorization_code',
+                'code' => 'used',
+                'client_id' => 'test',
+                'client_secret' => 'secret',
+                'redirect_uri' => 'http://example.com',
+            ]
+        );
+
+        $server = $this->registerAuthCodeGrantHandler($this->getServer());
+        $response = $server->authorize($this->getUser(), $serverRequest);
+
+        $this->assertInstanceOf(Response\JsonResponse::class, $response);
+        $this->assertEquals(
+            '{"code":400,"errors":{"code":"The provided authorization code is already used"}}',
             $response->getBody()->getContents()
         );
     }

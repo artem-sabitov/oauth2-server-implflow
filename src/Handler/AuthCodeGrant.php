@@ -136,8 +136,17 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
 
     protected function handlePartTwo(string $code) : ResponseInterface
     {
-        $code = $this->codeRepository->find($code);
-        $this->validateAuthorizationCode($code);
+        $authorizationCode = $this->codeRepository->find($code);
+        if ($authorizationCode === null) {
+            throw (new ParameterException())->withMessages([
+                self::AUTHORIZATION_CODE_KEY =>
+                    'The provided authorization code cannot be used'
+            ]);
+        }
+
+        $this->validateAuthorizationCode($authorizationCode);
+        $authorizationCode->setUsed(true);
+        $this->codeRepository->write($authorizationCode);
 
         $accessToken = $this->generateAccessToken();
         $this->accessTokenRepository->write($accessToken);
@@ -159,12 +168,12 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
     /**
      * throws Exception\ParameterException
      */
-    private function validateAuthorizationCode(?AuthorizationCode $code): void
+    private function validateAuthorizationCode(AuthorizationCode $code): void
     {
-        if ($code === null) {
+        if ($code->isUsed()) {
             throw (new ParameterException())->withMessages([
                 self::AUTHORIZATION_CODE_KEY =>
-                    'The provided authorization code cannot be used'
+                    'The provided authorization code is already used'
             ]);
         }
 
@@ -217,7 +226,7 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
         return $accessToken;
     }
 
-    protected function generateRefreshToken(TokenInterface $accessToken): RefreshToken
+    protected function generateRefreshToken(AccessToken $accessToken): RefreshToken
     {
         $expires = $accessToken->getExpires() + $this->config['refresh_token_extra_time'];
         $expires = (new \DateTime())

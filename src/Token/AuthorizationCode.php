@@ -13,6 +13,11 @@ class AuthorizationCode extends AbstractExpiresToken
     protected $authorizationCode;
 
     /**
+     * @var bool
+     */
+    protected $used;
+
+    /**
      * AuthorizationCode constructor.
      * @param string $authorizationCode
      * @param IdentityInterface $identity
@@ -26,6 +31,7 @@ class AuthorizationCode extends AbstractExpiresToken
         int $expires
     ) {
         $this->authorizationCode = $authorizationCode;
+        $this->used = false;
         parent::__construct($identity, $client, $expires);
     }
 
@@ -33,4 +39,17 @@ class AuthorizationCode extends AbstractExpiresToken
     {
         return $this->authorizationCode;
     }
+
+    public function isUsed(): bool
+    {
+        return $this->used;
+    }
+
+    public function setUsed(bool $used) : AuthorizationCode
+    {
+        $this->used = $used;
+
+        return $this;
+    }
+
 }

@@ -8,7 +8,6 @@ use OAuth2\Provider\ClientProviderInterface;
 use OAuth2\Provider\IdentityProviderInterface;
 use OAuth2\Repository\AccessTokenRepositoryInterface;
 use OAuth2\Request\AuthorizationRequest;
-use OAuth2\TokenRepositoryInterface;
 use Psr\Http\Message\ResponseInterface;
 
 abstract class AbstractAuthorizationHandler
