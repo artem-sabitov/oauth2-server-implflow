@@ -36,11 +36,32 @@ class AuthorizationRequest
     protected $responseType = '';
 
     /**
+     * @var string
+     */
+    protected $method = '';
+
+    /**
      * AuthorizationRequest constructor.
      */
     public function __construct(ServerRequestInterface $request)
     {
-        $this->setParams($request->getQueryParams());
+        switch (mb_strtoupper($request->getMethod())) {
+            case 'GET':
+                $this->method = 'GET';
+                $this->setParams($request->getQueryParams());
+                break;
+            case 'POST':
+                $this->method = 'POST';
+                $this->setParams($request->getParsedBody());
+                break;
+            default:
+                throw new ParameterException('Method not allowed', 405);
+        }
+    }
+
+    public function getMethod(): string
+    {
+        return $this->method;
     }
 
     public function getClientId(): string

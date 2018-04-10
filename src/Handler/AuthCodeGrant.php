@@ -90,11 +90,19 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
 
     private function isRequestAuthorizationCode(AuthorizationRequest $request): bool
     {
+        if ($request->getMethod() !== 'GET') {
+            return false;
+        }
+
         return $request->get(self::RESPONSE_TYPE_KEY) === self::AUTHORIZATION_GRANT;
     }
 
     private function isRequestAccessTokenByCode(AuthorizationRequest $request): bool
     {
+        if ($request->getMethod() !== 'POST') {
+            return false;
+        }
+
         return $request->get(self::GRANT_TYPE_KEY) === self::SUPPORTED_GRANT_TYPE;
     }
 

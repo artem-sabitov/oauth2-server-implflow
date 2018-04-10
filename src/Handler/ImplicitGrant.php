@@ -74,9 +74,11 @@ class ImplicitGrant extends AbstractAuthorizationHandler implements Authorizatio
 
     public function canHandle(AuthorizationRequest $request): bool
     {
-        $responseType = $request->get(self::RESPONSE_TYPE_KEY);
+        if ($request->getMethod() !== 'GET') {
+            return false;
+        }
 
-        return $responseType === self::AUTHORIZATION_GRANT;
+        return $request->get(self::RESPONSE_TYPE_KEY) === self::AUTHORIZATION_GRANT;
     }
 
     protected function generateAccessToken(): AccessToken

@@ -446,21 +446,15 @@ class ServerTest extends TestCase
 
     public function testRequestWithoutAuthorizationCodeReturnError()
     {
-        $serverRequest = new Request(
-            [],
-            [],
-            'http://example.com/',
-            'GET',
-            'php://memory',
-            [],
-            [],
-            [
+        $serverRequest = (new Request())
+            ->withMethod('POST')
+            ->withHeader('Content-Type', 'application/json')
+            ->withParsedBody([
                 'grant_type' => 'authorization_code',
                 'client_id' => 'test',
                 'client_secret' => 'secret',
                 'redirect_uri' => 'http://example.com',
-            ]
-        );
+            ]);
 
         $server = $this->registerAuthCodeGrantHandler($this->getServer());
         $response = $server->authorize($this->getUser(), $serverRequest);
@@ -474,22 +468,16 @@ class ServerTest extends TestCase
 
     public function testRequestWithEmptyAuthorizationCodeReturnError()
     {
-        $serverRequest = new Request(
-            [],
-            [],
-            'http://example.com/',
-            'GET',
-            'php://memory',
-            [],
-            [],
-            [
+        $serverRequest = (new Request())
+            ->withMethod('POST')
+            ->withHeader('Content-Type', 'application/json')
+            ->withParsedBody([
                 'grant_type' => 'authorization_code',
                 'code' => '',
                 'client_id' => 'test',
                 'client_secret' => 'secret',
                 'redirect_uri' => 'http://example.com',
-            ]
-        );
+            ]);
 
         $server = $this->registerAuthCodeGrantHandler($this->getServer());
         $response = $server->authorize($this->getUser(), $serverRequest);
@@ -503,22 +491,16 @@ class ServerTest extends TestCase
 
     public function testRequestWithExpiredAuthorizationCodeReturnError()
     {
-        $serverRequest = new Request(
-            [],
-            [],
-            'http://example.com/',
-            'GET',
-            'php://memory',
-            [],
-            [],
-            [
+        $serverRequest = (new Request())
+            ->withMethod('POST')
+            ->withHeader('Content-Type', 'application/json')
+            ->withParsedBody([
                 'grant_type' => 'authorization_code',
                 'code' => 'expired',
                 'client_id' => 'test',
                 'client_secret' => 'secret',
                 'redirect_uri' => 'http://example.com',
-            ]
-        );
+            ]);
 
         $server = $this->registerAuthCodeGrantHandler($this->getServer());
         $response = $server->authorize($this->getUser(), $serverRequest);
@@ -532,22 +514,16 @@ class ServerTest extends TestCase
 
     public function testRequestWithUsedAuthorizationCodeReturnError()
     {
-        $serverRequest = new Request(
-            [],
-            [],
-            'http://example.com/',
-            'GET',
-            'php://memory',
-            [],
-            [],
-            [
+        $serverRequest = (new Request())
+            ->withMethod('POST')
+            ->withHeader('Content-Type', 'application/json')
+            ->withParsedBody([
                 'grant_type' => 'authorization_code',
                 'code' => 'used',
                 'client_id' => 'test',
                 'client_secret' => 'secret',
                 'redirect_uri' => 'myapp://',
-            ]
-        );
+            ]);
 
         $server = $this->registerAuthCodeGrantHandler($this->getServer());
         $response = $server->authorize($this->getUser(), $serverRequest);
@@ -561,22 +537,16 @@ class ServerTest extends TestCase
 
     public function testRequestWithCorrectAuthorizationCodeReturnAccessToken()
     {
-        $serverRequest = new Request(
-            [],
-            [],
-            'http://example.com/',
-            'GET',
-            'php://memory',
-            [],
-            [],
-            [
+        $serverRequest = (new Request())
+            ->withMethod('POST')
+            ->withHeader('Content-Type', 'application/json')
+            ->withParsedBody([
                 'grant_type' => 'authorization_code',
                 'code' => 'test',
                 'client_id' => 'test',
                 'client_secret' => 'secret',
                 'redirect_uri' => 'http://example.com',
-            ]
-        );
+            ]);
 
         $server = $this->registerAuthCodeGrantHandler($this->getServer());
         $response = $server->authorize($this->getUser(), $serverRequest);
