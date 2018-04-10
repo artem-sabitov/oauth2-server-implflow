@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace OAuth2\Validator;
 
-use OAuth2\Handler\AuthCodeGrant;
+use OAuth2\Handler\AuthorizationCodeGrant;
 use OAuth2\Request\AuthorizationRequest;
 use OAuth2\Exception\ParameterException;
 use OAuth2\Messages;
@@ -72,8 +72,8 @@ class AccessTokenRequestValidator
 
     public function validateGrantType(AuthorizationRequest $request): bool
     {
-        if ($request->get(AuthCodeGrant::GRANT_TYPE_KEY) === '') {
-            $key = AuthCodeGrant::GRANT_TYPE_KEY;
+        if ($request->get(AuthorizationCodeGrant::GRANT_TYPE_KEY) === '') {
+            $key = AuthorizationCodeGrant::GRANT_TYPE_KEY;
             $this->addErrorMessage($key, $this->buildMissingParameterMessage($key));
 
             return false;
@@ -96,9 +96,9 @@ class AccessTokenRequestValidator
 
     public function validateCode(AuthorizationRequest $request): bool
     {
-        $code = $request->get(AuthCodeGrant::AUTHORIZATION_CODE_KEY);
+        $code = $request->get(AuthorizationCodeGrant::AUTHORIZATION_CODE_KEY);
         if ($code === null) {
-            $key = AuthCodeGrant::AUTHORIZATION_CODE_KEY;
+            $key = AuthorizationCodeGrant::AUTHORIZATION_CODE_KEY;
             $this->addErrorMessage($key, $this->buildMissingParameterMessage($key));
             return false;
         }

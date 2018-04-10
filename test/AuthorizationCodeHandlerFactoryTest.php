@@ -7,7 +7,7 @@ namespace OAuth2Test;
 use OAuth2\Exception;
 use OAuth2\Factory\AuthorizationCodeHandlerFactory;
 use OAuth2\Factory\ImplicitHandlerFactory;
-use OAuth2\Handler\AuthCodeGrant;
+use OAuth2\Handler\AuthorizationCodeGrant;
 use OAuth2\Repository\AccessTokenRepositoryInterface;
 use OAuth2\Repository\AuthorizationCodeRepositoryInterface;
 use OAuth2\Repository\ClientRepositoryInterface;
@@ -65,7 +65,7 @@ class AuthorizationCodeHandlerFactoryTest extends TestCase
 
     public function testFactoryWithoutConfig()
     {
-        $handler = AuthCodeGrant::class;
+        $handler = AuthorizationCodeGrant::class;
         $this->container->get('config')->willReturn([]);
         $this->expectException(Exception\InvalidConfigException::class);
         $this->expectExceptionMessage(sprintf(
@@ -77,7 +77,7 @@ class AuthorizationCodeHandlerFactoryTest extends TestCase
 
     public function testFactoryWithoutHandlersConfig()
     {
-        $handler = AuthCodeGrant::class;
+        $handler = AuthorizationCodeGrant::class;
         $this->container->get('config')->willReturn(['oauth2' => []]);
         $this->expectException(Exception\InvalidConfigException::class);
         $this->expectExceptionMessage(sprintf(
@@ -89,7 +89,7 @@ class AuthorizationCodeHandlerFactoryTest extends TestCase
 
     public function testFactoryWithoutClientProvider()
     {
-        $handler = AuthCodeGrant::class;
+        $handler = AuthorizationCodeGrant::class;
         $dependency = ClientRepositoryInterface::class;
 
         $this->container->get('config')->willReturn([
@@ -149,7 +149,7 @@ class AuthorizationCodeHandlerFactoryTest extends TestCase
         $this->expectException(Exception\InvalidConfigException::class);
         $this->expectExceptionMessage(sprintf(
             'Cannot create %s handler; dependency %s is missing',
-            AuthCodeGrant::class,
+            AuthorizationCodeGrant::class,
             $dependency
         ));
         ($this->factory)($this->container->reveal());
@@ -163,6 +163,6 @@ class AuthorizationCodeHandlerFactoryTest extends TestCase
             ],
         ]);
         $server = ($this->factory)($this->container->reveal());
-        $this->assertInstanceOf(AuthCodeGrant::class, $server);
+        $this->assertInstanceOf(AuthorizationCodeGrant::class, $server);
     }
 }

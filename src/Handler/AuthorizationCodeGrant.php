@@ -29,7 +29,7 @@ use Zend\Diactoros\Response\JsonResponse;
 use Zend\Diactoros\Response\RedirectResponse;
 use Zend\Diactoros\Uri;
 
-class AuthCodeGrant extends AbstractAuthorizationHandler implements AuthorizationHandlerInterface
+class AuthorizationCodeGrant extends AbstractAuthorizationHandler implements AuthorizationHandlerInterface
 {
     public const AUTHORIZATION_GRANT = 'code';
     public const AUTHORIZATION_CODE_KEY = 'code';
@@ -171,8 +171,6 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
     protected function handlePartTwo(AuthorizationCode $authorizationCode) : ResponseInterface
     {
         $this->validateAuthorizationCode($authorizationCode);
-        $authorizationCode->setUsed(true);
-        $this->codeRepository->write($authorizationCode);
 
         $accessToken = $this->generateAccessToken();
         $accessToken = $this->accessTokenRepository->write($accessToken);
@@ -187,6 +185,9 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
             self::EXPIRES_IN_KEY => $accessToken->getExpires(),
             self::EXPIRES_ON_KEY => (new \DateTime())->getTimestamp() + $accessToken->getExpires(),
         ];
+
+        $authorizationCode->setUsed(true);
+        $this->codeRepository->write($authorizationCode);
 
         return new JsonResponse($payload);
     }

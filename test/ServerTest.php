@@ -7,7 +7,7 @@ namespace OAuth2Test;
 use OAuth2\ClientInterface;
 use OAuth2\ConfigProvider;
 use OAuth2\Exception\InvalidConfigException;
-use OAuth2\Handler\AuthCodeGrant;
+use OAuth2\Handler\AuthorizationCodeGrant;
 use OAuth2\Handler\ImplicitGrant;
 use OAuth2\IdentityInterface;
 use OAuth2\Repository\AccessTokenRepositoryInterface;
@@ -103,7 +103,7 @@ class ServerTest extends TestCase
             $this->createMock(ClientInterface::class)
         );
 
-        $handler = new AuthCodeGrant(
+        $handler = new AuthorizationCodeGrant(
             [
                 'expiration_time' => 60 * 60,
                 'issuer_identifier' => 'test_server',
@@ -416,7 +416,7 @@ class ServerTest extends TestCase
         $uri = new Uri($response->getHeader('location')[0]);
         $params = [];
         parse_str($uri->getQuery(), $params);
-        $code = $params[AuthCodeGrant::AUTHORIZATION_GRANT];
+        $code = $params[AuthorizationCodeGrant::AUTHORIZATION_GRANT];
 
         $this->assertNotEmpty($code);
     }
@@ -581,7 +581,7 @@ class ServerTest extends TestCase
 
         $params = [];
         parse_str($uri->getQuery(), $params);
-        $code = $params[AuthCodeGrant::AUTHORIZATION_GRANT];
+        $code = $params[AuthorizationCodeGrant::AUTHORIZATION_GRANT];
 
         $this->assertNotEmpty($code);
     }
