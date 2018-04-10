@@ -2,12 +2,9 @@
 
 namespace OAuth2Test\Assets;
 
-use InvalidArgumentException;
 use OAuth2\Client;
 use OAuth2\ClientInterface;
-use OAuth2\Exception\ParameterException;
 use OAuth2\Repository\ClientRepositoryInterface;
-use OAuth2\Request\AuthorizationRequest;
 
 class TestClientRepository implements ClientRepositoryInterface
 {
@@ -25,9 +22,9 @@ class TestClientRepository implements ClientRepositoryInterface
         $this->clients['testapp'] = new Client('test','testapp://authorize','secret');
     }
 
-    public function write(ClientInterface $client): void
+    public function write(ClientInterface $client): ClientInterface
     {
-        // TODO: Implement write() method.
+        return $client;
     }
 
     public function find(string $client): ?ClientInterface

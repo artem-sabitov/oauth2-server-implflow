@@ -8,7 +8,7 @@ use OAuth2\ClientInterface;
 
 interface ClientRepositoryInterface
 {
-    public function write(ClientInterface $client) : void;
+    public function write(ClientInterface $client) : ClientInterface;
 
     public function find(string $client) : ?ClientInterface;
 }

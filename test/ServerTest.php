@@ -11,19 +11,19 @@ use OAuth2\Handler\AuthCodeGrant;
 use OAuth2\Handler\ImplicitGrant;
 use OAuth2\IdentityInterface;
 use OAuth2\Repository\AccessTokenRepositoryInterface;
-use OAuth2\Repository\AuthorizationCodeRepositoryInterface;
 use OAuth2\Repository\ClientRepositoryInterface;
 use OAuth2\Repository\RefreshTokenRepositoryInterface;
 use OAuth2\Request\AuthorizationRequest;
 use OAuth2\Provider\IdentityProviderInterface;
 use OAuth2\Server;
 use OAuth2\ServerInterface;
-use OAuth2\Token\AuthorizationCode;
 use OAuth2\UriBuilder;
+use OAuth2Test\Assets\TestAccessTokenRepository;
+use OAuth2Test\Assets\TestAuthorizationCodeRepository;
 use OAuth2Test\Assets\TestClientRepository;
+use OAuth2Test\Assets\TestRefreshTokenRepository;
 use OAuth2Test\Assets\TestSuccessIdentityProvider;
 use PHPUnit\Framework\TestCase;
-use Prophecy\Argument;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Zend\Diactoros\Response;
@@ -67,7 +67,6 @@ class ServerTest extends TestCase
             return new Response();
         };
 
-        $this->identityProvider = new TestSuccessIdentityProvider();
         $this->clientRepository = new TestClientRepository();
     }
 
@@ -78,7 +77,7 @@ class ServerTest extends TestCase
 
     public function registerImplicitGrantHandler(ServerInterface $server): ServerInterface
     {
-        $tokenRepository = $this->createMock(AccessTokenRepositoryInterface::class);
+        $tokenRepository = new TestAccessTokenRepository();
         $handler = new ImplicitGrant(
             [
                 'expiration_time' => 60 * 60,
@@ -97,35 +96,13 @@ class ServerTest extends TestCase
 
     public function registerAuthCodeGrantHandler(ServerInterface $server): ServerInterface
     {
-        $testCode = new AuthorizationCode(
-            'test',
+        $accessTokenRepository = new TestAccessTokenRepository();
+        $refreshTokenRepository = new TestRefreshTokenRepository();
+        $codeRepository = new TestAuthorizationCodeRepository(
             $this->createMock(IdentityInterface::class),
-            $this->createMock(ClientInterface::class),
-            (new \DateTime())->modify('+1 day')->getTimestamp()
+            $this->createMock(ClientInterface::class)
         );
-        $expiredCode = new AuthorizationCode(
-            'expired',
-            $this->createMock(IdentityInterface::class),
-            $this->createMock(ClientInterface::class),
-            1522540800
-        );
-        $usedCode = new AuthorizationCode(
-            'expired',
-            $this->createMock(IdentityInterface::class),
-            $this->createMock(ClientInterface::class),
-            1522540800
-        );
-        $usedCode->setUsed(true);
 
-        $accessTokenRepository = $this->createMock(AccessTokenRepositoryInterface::class);
-        $refreshTokenRepository = $this->createMock(RefreshTokenRepositoryInterface::class);
-        $codeRepository = $this->prophesize(AuthorizationCodeRepositoryInterface::class);
-        $codeRepository->find('test')->willReturn($testCode);
-        $codeRepository->find('expired')->willReturn($expiredCode);
-        $codeRepository->find('used')->willReturn($usedCode);
-        $codeRepository->find('')->willReturn(null);
-        $codeRepository->find(null)->willReturn(null);
-        $codeRepository->write(Argument::any())->will(function () { return; });
         $handler = new AuthCodeGrant(
             [
                 'expiration_time' => 60 * 60,
@@ -140,7 +117,7 @@ class ServerTest extends TestCase
             $this->clientRepository,
             $accessTokenRepository,
             $refreshTokenRepository,
-            $codeRepository->reveal()
+            $codeRepository
         );
 
         return $server->registerHandler('code', $handler);

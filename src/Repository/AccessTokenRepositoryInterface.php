@@ -8,7 +8,7 @@ use OAuth2\Token\AccessToken;
 
 interface AccessTokenRepositoryInterface
 {
-    public function write(AccessToken $token) : void;
+    public function write(AccessToken $token) : AccessToken;
 
     public function find(string $token) : ?AccessToken;
 }

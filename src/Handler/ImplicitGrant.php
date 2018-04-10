@@ -65,7 +65,7 @@ class ImplicitGrant extends AbstractAuthorizationHandler implements Authorizatio
         $this->client = $this->clientRepository->find($this->request->getClientId());
 
         $accessToken = $this->generateAccessToken();
-        $this->accessTokenRepository->write($accessToken);
+        $accessToken = $this->accessTokenRepository->write($accessToken);
 
         return new RedirectResponse(
             $this->generateRedirectUri($accessToken)

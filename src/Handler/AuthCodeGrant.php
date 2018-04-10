@@ -161,7 +161,7 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
     protected function handlePartOne() : ResponseInterface
     {
         $code = $this->generateAuthorizationCode();
-        $this->codeRepository->write($code);
+        $code = $this->codeRepository->write($code);
 
         return new RedirectResponse(
             $this->generateRedirectUri($code)
@@ -175,10 +175,10 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
         $this->codeRepository->write($authorizationCode);
 
         $accessToken = $this->generateAccessToken();
-        $this->accessTokenRepository->write($accessToken);
+        $accessToken = $this->accessTokenRepository->write($accessToken);
 
         $refreshToken = $this->generateRefreshToken($accessToken);
-        $this->refreshTokenRepository->write($refreshToken);
+        $refreshToken = $this->refreshTokenRepository->write($refreshToken);
 
         $payload = [
             self::ACCESS_TOKEN_KEY => $accessToken->getValue(),
