@@ -20,6 +20,7 @@ use OAuth2\Token\AuthorizationCode;
 use OAuth2\Token\RefreshToken;
 use OAuth2\Token\TokenBuilder;
 use OAuth2\TokenRepositoryInterface;
+use OAuth2\UriBuilder;
 use OAuth2\Validator\AccessTokenRequestValidator;
 use OAuth2\Validator\AuthorizationCodeRequestValidator;
 use Psr\Http\Message\ResponseInterface;
@@ -264,9 +265,13 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
         $redirectUri = $authorizationCode->getClient()->getRedirectUri();
         $query = http_build_query([
             self::AUTHORIZATION_CODE_KEY => $authorizationCode->getValue(),
-            // TODO @artem_sabitov return state from request
+            self::EXPIRES_ON_KEY => $authorizationCode->getExpires(),
         ]);
 
-        return (new Uri($redirectUri))->withQuery($query);
+        $uri = (new UriBuilder())
+            ->setAllowedSchemes($this->config['allowed_schemes'])
+            ->build($redirectUri);
+
+        return $uri->withQuery($query);
     }
 }

@@ -11,6 +11,7 @@ use OAuth2\Request\AuthorizationRequest;
 use OAuth2\Token\AccessToken;
 use OAuth2\Token\TokenInterface;
 use OAuth2\Token\TokenBuilder;
+use OAuth2\UriBuilder;
 use OAuth2\Validator\AuthorizationRequestValidator;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
@@ -100,11 +101,11 @@ class ImplicitGrant extends AbstractAuthorizationHandler implements Authorizatio
             $requestedRedirectUri = $this->request->get(self::REDIRECT_URI_KEY);
         }
 
-        $query = [
+        $query = http_build_query([
             self::ACCESS_TOKEN_KEY => $accessToken->getValue(),
             self::EXPIRES_IN_KEY => $this->config['expiration_time'],
             self::EXPIRES_ON_KEY => $accessToken->getExpires(),
-        ];
+        ]);
 
         $redirectUri = $accessToken->getClient()->getRedirectUri();
 
@@ -118,7 +119,11 @@ class ImplicitGrant extends AbstractAuthorizationHandler implements Authorizatio
             ]);
         }
 
-        return (new Uri($requestedRedirectUri))->withQuery(http_build_query($query));
+        $uri = (new UriBuilder())
+            ->setAllowedSchemes($this->config['allowed_schemes'])
+            ->build($redirectUri);
+
+        return $uri->withQuery($query);
     }
 
     public function getAuthorizationRequestValidator(): AuthorizationRequestValidator

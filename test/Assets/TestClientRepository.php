@@ -16,27 +16,13 @@ class TestClientRepository implements ClientRepositoryInterface
      */
     private $clients;
 
-    /**
-     * @var array
-     */
-    private $clientProperties = [
-        'identificator' => 'test',
-        'redirect_uri' => 'http://example.com',
-        'secret' => 'secret',
-    ];
-
     public function __construct($clientProperties = [])
     {
         if (! empty($clientProperties)) {
             $this->clientProperties = $clientProperties;
         }
-
-        $clientId = $this->clientProperties['identificator'];
-        $this->clients[$clientId] = new Client(
-            $this->clientProperties['identificator'],
-            $this->clientProperties['redirect_uri'],
-            $this->clientProperties['secret']
-        );
+        $this->clients['test'] = new Client('test','http://example.com','secret');
+        $this->clients['testapp'] = new Client('test','testapp://authorize','secret');
     }
 
     public function write(ClientInterface $client): void

@@ -28,12 +28,20 @@ class ConfigProvider
             'authorization_handlers' => [],
             'implicit_flow' => [
                 'expiration_time' => 60 * 60 * 6, // 6 hours
-                'issuer_identifier' => ''
+                'issuer_identifier' => '',
+                'allowed_schemes' => [
+                    'http' => 80,
+                    'https' => 443,
+                ],
             ],
             'authorization_code_flow' => [
                 'expiration_time' => 60 * 60 * 6, // 6 hours
                 'issuer_identifier' => '',
                 'refresh_token_extra_time' => 60 * 60,
+                'allowed_schemes' => [
+                    'http' => 80,
+                    'https' => 443,
+                ],
             ],
         ];
     }

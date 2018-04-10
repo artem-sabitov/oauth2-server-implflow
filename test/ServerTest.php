@@ -19,6 +19,7 @@ use OAuth2\Provider\IdentityProviderInterface;
 use OAuth2\Server;
 use OAuth2\ServerInterface;
 use OAuth2\Token\AuthorizationCode;
+use OAuth2\UriBuilder;
 use OAuth2Test\Assets\TestClientRepository;
 use OAuth2Test\Assets\TestSuccessIdentityProvider;
 use PHPUnit\Framework\TestCase;
@@ -82,6 +83,10 @@ class ServerTest extends TestCase
             [
                 'expiration_time' => 60 * 60,
                 'issuer_identifier' => 'test_server',
+                'allowed_schemes' => [
+                    'http' => 80,
+                    'https' => 443,
+                ],
             ],
             $this->clientRepository,
             $tokenRepository
@@ -126,6 +131,11 @@ class ServerTest extends TestCase
                 'expiration_time' => 60 * 60,
                 'issuer_identifier' => 'test_server',
                 'refresh_token_extra_time' => 60 * 60,
+                'allowed_schemes' => [
+                    'http' => 80,
+                    'https' => 443,
+                    'testapp' => 0,
+                ],
             ],
             $this->clientRepository,
             $accessTokenRepository,
@@ -585,5 +595,47 @@ class ServerTest extends TestCase
         $this->assertArrayHasKey('expires_on', $payload);
         $this->assertArrayHasKey('refresh_token', $payload);
         $this->assertNotEmpty($payload['refresh_token']);
+    }
+
+    public function testRequestWithCustomUriScheme()
+    {
+        $serverRequest = new Request(
+            [],
+            [],
+            'http://example.com/',
+            'GET',
+            'php://memory',
+            [],
+            [],
+            [
+                'client_id' => 'testapp',
+                'response_type' => 'code',
+                'redirect_uri' => 'testapp://authorize',
+            ]
+        );
+
+        $server = $this->registerAuthCodeGrantHandler($this->getServer());
+        $response = $server->authorize($this->getUser(), $serverRequest);
+
+        $this->assertInstanceOf(ResponseInterface::class, $response);
+
+        $body = $response->getBody()->getContents();
+        $this->assertEquals('', $body);
+
+        $this->assertArrayHasKey('location', $response->getHeaders());
+        $this->assertStringMatchesFormat(
+            'testapp://authorize?code=%s',
+            $response->getHeader('location')[0]
+        );
+
+        $uri = (new UriBuilder())
+            ->setAllowedSchemes(['testapp' => 0])
+            ->build($response->getHeader('location')[0]);
+
+        $params = [];
+        parse_str($uri->getQuery(), $params);
+        $code = $params[AuthCodeGrant::AUTHORIZATION_GRANT];
+
+        $this->assertNotEmpty($code);
     }
 }
