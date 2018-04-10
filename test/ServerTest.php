@@ -12,14 +12,14 @@ use OAuth2\Handler\ImplicitGrant;
 use OAuth2\IdentityInterface;
 use OAuth2\Repository\AccessTokenRepositoryInterface;
 use OAuth2\Repository\AuthorizationCodeRepositoryInterface;
+use OAuth2\Repository\ClientRepositoryInterface;
 use OAuth2\Repository\RefreshTokenRepositoryInterface;
 use OAuth2\Request\AuthorizationRequest;
-use OAuth2\Provider\ClientProviderInterface;
 use OAuth2\Provider\IdentityProviderInterface;
 use OAuth2\Server;
 use OAuth2\ServerInterface;
 use OAuth2\Token\AuthorizationCode;
-use OAuth2Test\Assets\TestClientProvider;
+use OAuth2Test\Assets\TestClientRepository;
 use OAuth2Test\Assets\TestSuccessIdentityProvider;
 use PHPUnit\Framework\TestCase;
 use Prophecy\Argument;
@@ -49,9 +49,9 @@ class ServerTest extends TestCase
     private $identityProvider;
 
     /**
-     * @var ClientProviderInterface
+     * @var ClientRepositoryInterface
      */
-    private $clientProvider;
+    private $clientRepository;
 
     protected function setUp()
     {
@@ -67,7 +67,7 @@ class ServerTest extends TestCase
         };
 
         $this->identityProvider = new TestSuccessIdentityProvider();
-        $this->clientProvider = new TestClientProvider();
+        $this->clientRepository = new TestClientRepository();
     }
 
     public function getServer(): ServerInterface
@@ -83,7 +83,7 @@ class ServerTest extends TestCase
                 'expiration_time' => 60 * 60,
                 'issuer_identifier' => 'test_server',
             ],
-            $this->clientProvider,
+            $this->clientRepository,
             $tokenRepository
         );
 
@@ -127,7 +127,7 @@ class ServerTest extends TestCase
                 'issuer_identifier' => 'test_server',
                 'refresh_token_extra_time' => 60 * 60,
             ],
-            $this->clientProvider,
+            $this->clientRepository,
             $accessTokenRepository,
             $refreshTokenRepository,
             $codeRepository->reveal()

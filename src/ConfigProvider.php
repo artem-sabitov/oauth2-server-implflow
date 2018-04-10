@@ -14,13 +14,14 @@ class ConfigProvider
     {
         return [
             'dependencies' => $this->getDependencies(),
+            'oauth2' => $this->getOAuth2Config(),
         ];
     }
 
     /**
      * Returns the OAuth configuration
      */
-    public function getOAuthConfig() : array
+    public function getOAuth2Config() : array
     {
         return [
             'authentication_uri' => '',

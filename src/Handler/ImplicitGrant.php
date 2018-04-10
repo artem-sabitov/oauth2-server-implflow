@@ -6,7 +6,6 @@ namespace OAuth2\Handler;
 
 use OAuth2\ClientInterface;
 use OAuth2\Exception\ParameterException;
-use OAuth2\Exception\RuntimeException;
 use OAuth2\IdentityInterface;
 use OAuth2\Request\AuthorizationRequest;
 use OAuth2\Token\AccessToken;
@@ -62,7 +61,7 @@ class ImplicitGrant extends AbstractAuthorizationHandler implements Authorizatio
 
         $this->request = $request;
         $this->user = $user;
-        $this->client = $this->getClientById($this->request->getClientId());
+        $this->client = $this->clientRepository->find($this->request->getClientId());
 
         $accessToken = $this->generateAccessToken();
         $this->accessTokenRepository->write($accessToken);

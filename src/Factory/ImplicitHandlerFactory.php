@@ -6,9 +6,8 @@ namespace OAuth2\Factory;
 
 use OAuth2\Exception;
 use OAuth2\Handler\ImplicitGrant;
-use OAuth2\Provider\ClientProviderInterface;
 use OAuth2\Repository\AccessTokenRepositoryInterface;
-use OAuth2\TokenRepositoryInterface;
+use OAuth2\Repository\ClientRepositoryInterface;
 use Psr\Container\ContainerInterface;
 
 class ImplicitHandlerFactory
@@ -23,10 +22,10 @@ class ImplicitHandlerFactory
             ));
         }
 
-        if (! $container->has(ClientProviderInterface::class)) {
+        if (! $container->has(ClientRepositoryInterface::class)) {
             throw new Exception\InvalidConfigException(sprintf(
                 'Cannot create %s handler; dependency %s is missing',
-                ImplicitGrant::class,ClientProviderInterface::class
+                ImplicitGrant::class,ClientRepositoryInterface::class
             ));
         }
 
@@ -39,7 +38,7 @@ class ImplicitHandlerFactory
 
         return new ImplicitGrant(
             $config,
-            $container->get(ClientProviderInterface::class),
+            $container->get(ClientRepositoryInterface::class),
             $container->get(AccessTokenRepositoryInterface::class)
         );
     }

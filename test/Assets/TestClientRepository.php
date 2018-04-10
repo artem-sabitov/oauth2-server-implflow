@@ -6,10 +6,10 @@ use InvalidArgumentException;
 use OAuth2\Client;
 use OAuth2\ClientInterface;
 use OAuth2\Exception\ParameterException;
-use OAuth2\Provider\ClientProviderInterface;
+use OAuth2\Repository\ClientRepositoryInterface;
 use OAuth2\Request\AuthorizationRequest;
 
-class TestClientProvider implements ClientProviderInterface
+class TestClientRepository implements ClientRepositoryInterface
 {
     /**
      * @var null|array
@@ -39,24 +39,17 @@ class TestClientProvider implements ClientProviderInterface
         );
     }
 
-    /**
-     * @return ClientInterface
-     * @throws InvalidArgumentException
-     */
-    public function getClientById(string $clientId): ClientInterface
+    public function write(ClientInterface $client): void
     {
-        if (isset($this->clients[$clientId]) === false) {
-            throw ParameterException::createInvalidParameter(
-                AuthorizationRequest::CLIENT_ID_KEY
-            );
-        }
-
-        return $this->clients[$clientId];
+        // TODO: Implement write() method.
     }
 
-    public function hasClientById(string $clientId): bool
+    public function find(string $client): ?ClientInterface
     {
-        return isset($this->clients[$clientId]) &&
-            $this->clients[$clientId] instanceof ClientInterface;
+        if (isset($this->clients[$client]) === false) {
+            return null;
+        }
+
+        return $this->clients[$client];
     }
 }

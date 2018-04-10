@@ -2,10 +2,9 @@
 
 namespace OAuth2\Handler;
 
-use OAuth2\ClientInterface;
 use OAuth2\IdentityInterface;
-use OAuth2\Provider\ClientProviderInterface;
 use OAuth2\Provider\IdentityProviderInterface;
+use OAuth2\Repository\ClientRepositoryInterface;
 use OAuth2\Repository\AccessTokenRepositoryInterface;
 use OAuth2\Request\AuthorizationRequest;
 use Psr\Http\Message\ResponseInterface;
@@ -34,9 +33,9 @@ abstract class AbstractAuthorizationHandler
     protected $identityProvider;
 
     /**
-     * @var ClientProviderInterface
+     * @var ClientRepositoryInterface
      */
-    protected $clientProvider;
+    protected $clientRepository;
 
     /**
      * @var AccessTokenRepositoryInterface
@@ -46,24 +45,19 @@ abstract class AbstractAuthorizationHandler
     /**
      * AbstractGrantType constructor.
      * @param IdentityProviderInterface $identityProvider
-     * @param ClientProviderInterface $clientProvider
+     * @param ClientRepositoryInterface $clientProvider
      */
     public function __construct(
         array $config,
-        ClientProviderInterface $clientProvider,
+        ClientRepositoryInterface $clientRepository,
         AccessTokenRepositoryInterface $accessTokenRepository
     ) {
         $this->config = $config;
-        $this->clientProvider = $clientProvider;
+        $this->clientRepository = $clientRepository;
         $this->accessTokenRepository = $accessTokenRepository;
     }
 
     abstract public function canHandle(AuthorizationRequest $request): bool;
 
     abstract public function handle(IdentityInterface $user, AuthorizationRequest $request): ResponseInterface;
-
-    public function getClientById(string $clientId): ClientInterface
-    {
-        return $this->clientProvider->getClientById($clientId);
-    }
 }

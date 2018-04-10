@@ -8,12 +8,10 @@ use OAuth2\Exception;
 use OAuth2\Factory\AuthorizationCodeHandlerFactory;
 use OAuth2\Factory\ImplicitHandlerFactory;
 use OAuth2\Handler\AuthCodeGrant;
-use OAuth2\Handler\ImplicitGrant;
-use OAuth2\Provider\ClientProviderInterface;
 use OAuth2\Repository\AccessTokenRepositoryInterface;
 use OAuth2\Repository\AuthorizationCodeRepositoryInterface;
+use OAuth2\Repository\ClientRepositoryInterface;
 use OAuth2\Repository\RefreshTokenRepositoryInterface;
-use OAuth2\TokenRepositoryInterface;
 use PHPUnit\Framework\TestCase;
 use Prophecy\Prophecy\ObjectProphecy;
 use Psr\Container\ContainerInterface;
@@ -34,16 +32,16 @@ class AuthorizationCodeHandlerFactoryTest extends TestCase
     {
         $this->container = $this->prophesize(ContainerInterface::class);
         $this->factory = new AuthorizationCodeHandlerFactory();
-        $clientProvider = $this->prophesize(ClientProviderInterface::class);
+        $clientRepository = $this->prophesize(ClientRepositoryInterface::class);
         $accessTokenRepository = $this->prophesize(AccessTokenRepositoryInterface::class);
         $refreshTokenRepository = $this->prophesize(RefreshTokenRepositoryInterface::class);
         $codeRepository = $this->prophesize(AuthorizationCodeRepositoryInterface::class);
 
         $this->container
-            ->get(ClientProviderInterface::class)
-            ->willReturn($clientProvider->reveal());
+            ->get(ClientRepositoryInterface::class)
+            ->willReturn($clientRepository->reveal());
         $this->container
-            ->has(ClientProviderInterface::class)
+            ->has(ClientRepositoryInterface::class)
             ->willReturn(true);
         $this->container
             ->get(AccessTokenRepositoryInterface::class)
@@ -92,7 +90,7 @@ class AuthorizationCodeHandlerFactoryTest extends TestCase
     public function testFactoryWithoutClientProvider()
     {
         $handler = AuthCodeGrant::class;
-        $dependency = ClientProviderInterface::class;
+        $dependency = ClientRepositoryInterface::class;
 
         $this->container->get('config')->willReturn([
             'oauth2' => [

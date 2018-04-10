@@ -11,6 +11,7 @@ use OAuth2\IdentityInterface;
 use OAuth2\Provider\ClientProviderInterface;
 use OAuth2\Repository\AccessTokenRepositoryInterface;
 use OAuth2\Repository\AuthorizationCodeRepositoryInterface;
+use OAuth2\Repository\ClientRepositoryInterface;
 use OAuth2\Repository\RefreshTokenRepositoryInterface;
 use OAuth2\Request\AuthorizationRequest;
 use OAuth2\Token\AccessToken;
@@ -70,14 +71,14 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
 
     public function __construct(
         array $config,
-        ClientProviderInterface $clientProvider,
+        ClientRepositoryInterface $clientRepository,
         AccessTokenRepositoryInterface $accessTokenRepository,
         RefreshTokenRepositoryInterface $refreshTokenRepository,
         AuthorizationCodeRepositoryInterface $codeRepository
     ) {
         $this->codeRepository = $codeRepository;
         $this->refreshTokenRepository = $refreshTokenRepository;
-        parent::__construct($config, $clientProvider, $accessTokenRepository);
+        parent::__construct($config, $clientRepository, $accessTokenRepository);
     }
 
     public function canHandle(AuthorizationRequest $request): bool
@@ -101,14 +102,14 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
         $this->request = $request;
         $this->user = $user;
 
+        $this->client = $this->clientRepository->find($this->request->getClientId());
+
         if ($this->isRequestAuthorizationCode($request)) {
             $validator = $this->getAuthorizationCodeRequestValidator();
             if ($validator->validate($request) === false) {
                 $messages = $validator->getErrorMessages();
                 throw ParameterException::create($messages);
             }
-
-            $this->client = $this->getClientById($this->request->getClientId());
 
             return $this->handlePartOne();
         }
@@ -128,8 +129,6 @@ class AuthCodeGrant extends AbstractAuthorizationHandler implements Authorizatio
                         'The provided authorization code cannot be used'
                 ]);
             }
-
-            $this->client = $this->getClientById($this->request->getClientId());
 
             return $this->handlePartTwo($authorizationCode);
         }

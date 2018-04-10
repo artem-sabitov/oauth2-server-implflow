@@ -6,11 +6,10 @@ namespace OAuth2\Factory;
 
 use OAuth2\Exception;
 use OAuth2\Handler\AuthCodeGrant;
-use OAuth2\Provider\ClientProviderInterface;
+use OAuth2\Repository\ClientRepositoryInterface;
 use OAuth2\Repository\AccessTokenRepositoryInterface;
 use OAuth2\Repository\AuthorizationCodeRepositoryInterface;
 use OAuth2\Repository\RefreshTokenRepositoryInterface;
-use OAuth2\TokenRepositoryInterface;
 use Psr\Container\ContainerInterface;
 
 class AuthorizationCodeHandlerFactory
@@ -25,10 +24,10 @@ class AuthorizationCodeHandlerFactory
             ));
         }
 
-        if (! $container->has(ClientProviderInterface::class)) {
+        if (! $container->has(ClientRepositoryInterface::class)) {
             throw new Exception\InvalidConfigException(sprintf(
                 'Cannot create %s handler; dependency %s is missing',
-                AuthCodeGrant::class,ClientProviderInterface::class
+                AuthCodeGrant::class,ClientRepositoryInterface::class
             ));
         }
 
@@ -55,7 +54,7 @@ class AuthorizationCodeHandlerFactory
 
         return new AuthCodeGrant(
             $config,
-            $container->get(ClientProviderInterface::class),
+            $container->get(ClientRepositoryInterface::class),
             $container->get(AccessTokenRepositoryInterface::class),
             $container->get(RefreshTokenRepositoryInterface::class),
             $container->get(AuthorizationCodeRepositoryInterface::class)

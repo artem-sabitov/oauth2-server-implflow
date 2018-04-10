@@ -7,9 +7,8 @@ namespace OAuth2Test;
 use OAuth2\Exception;
 use OAuth2\Factory\ImplicitHandlerFactory;
 use OAuth2\Handler\ImplicitGrant;
-use OAuth2\Provider\ClientProviderInterface;
 use OAuth2\Repository\AccessTokenRepositoryInterface;
-use OAuth2\TokenRepositoryInterface;
+use OAuth2\Repository\ClientRepositoryInterface;
 use PHPUnit\Framework\TestCase;
 use Prophecy\Prophecy\ObjectProphecy;
 use Psr\Container\ContainerInterface;
@@ -30,14 +29,14 @@ class ImplicitHandlerFactoryTest extends TestCase
     {
         $this->container = $this->prophesize(ContainerInterface::class);
         $this->factory = new ImplicitHandlerFactory();
-        $clientProvider = $this->prophesize(ClientProviderInterface::class);
+        $clientRepository = $this->prophesize(ClientRepositoryInterface::class);
         $tokenRepository = $this->prophesize(AccessTokenRepositoryInterface::class);
 
         $this->container
-            ->get(ClientProviderInterface::class)
-            ->willReturn($clientProvider);
+            ->get(ClientRepositoryInterface::class)
+            ->willReturn($clientRepository);
         $this->container
-            ->has(ClientProviderInterface::class)
+            ->has(ClientRepositoryInterface::class)
             ->willReturn(true);
         $this->container
             ->get(AccessTokenRepositoryInterface::class)
@@ -66,7 +65,7 @@ class ImplicitHandlerFactoryTest extends TestCase
     public function testFactoryWithoutClientProvider()
     {
         $handler = ImplicitGrant::class;
-        $dependency = ClientProviderInterface::class;
+        $dependency = ClientRepositoryInterface::class;
 
         $this->container->get('config')->willReturn([
             'oauth2' => [
