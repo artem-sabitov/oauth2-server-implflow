@@ -111,14 +111,21 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler implements Aut
         $this->request = $request;
         $this->user = $user;
 
-        $this->client = $this->clientRepository->find($this->request->getClientId());
-
         if ($this->isRequestAuthorizationCode($request)) {
             $validator = $this->getAuthorizationCodeRequestValidator();
             if ($validator->validate($request) === false) {
                 $messages = $validator->getErrorMessages();
                 throw ParameterException::create($messages);
             }
+
+            $client = $this->clientRepository->find($request->getClientId());
+            if ($client === null) {
+                throw (new ParameterException())->withMessages([
+                    self::CLIENT_ID_KEY =>
+                        'The provided client_id cannot be used'
+                ]);
+            }
+            $this->client = $client;
 
             return $this->handlePartOne();
         }
