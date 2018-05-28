@@ -111,21 +111,21 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler implements Aut
         $this->request = $request;
         $this->user = $user;
 
+        $client = $this->clientRepository->find($request->getClientId());
+        if ($client === null) {
+            throw (new ParameterException())->withMessages([
+                self::CLIENT_ID_KEY =>
+                    'The provided client_id cannot be used'
+            ]);
+        }
+        $this->client = $client;
+
         if ($this->isRequestAuthorizationCode($request)) {
             $validator = $this->getAuthorizationCodeRequestValidator();
             if ($validator->validate($request) === false) {
                 $messages = $validator->getErrorMessages();
                 throw ParameterException::create($messages);
             }
-
-            $client = $this->clientRepository->find($request->getClientId());
-            if ($client === null) {
-                throw (new ParameterException())->withMessages([
-                    self::CLIENT_ID_KEY =>
-                        'The provided client_id cannot be used'
-                ]);
-            }
-            $this->client = $client;
 
             return $this->handlePartOne();
         }
@@ -278,11 +278,27 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler implements Aut
 
     protected function generateRedirectUri(AuthorizationCode $authorizationCode): UriInterface
     {
-        $redirectUri = $authorizationCode->getClient()->getRedirectUri();
+        $requestedRedirectUri = '';
+        if ($this->request instanceof AuthorizationRequest) {
+            $requestedRedirectUri = $this->request->get(self::REDIRECT_URI_KEY);
+        }
+
         $query = http_build_query([
             self::AUTHORIZATION_CODE_KEY => $authorizationCode->getValue(),
             self::EXPIRES_ON_KEY => $authorizationCode->getExpires(),
         ]);
+
+        $redirectUri = $authorizationCode->getClient()->getRedirectUri();
+
+        if (strpos($requestedRedirectUri, $redirectUri) === false) {
+            throw (new ParameterException())->withMessages([
+                self::REDIRECT_URI_KEY => sprintf(
+                    "Uri %s can not register for client %s",
+                    $requestedRedirectUri,
+                    $authorizationCode->getClient()->getClientId()
+                )
+            ]);
+        }
 
         $uri = (new UriBuilder())
             ->setAllowedSchemes($this->config['allowed_schemes'])
