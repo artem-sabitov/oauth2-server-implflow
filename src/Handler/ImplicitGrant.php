@@ -62,7 +62,15 @@ class ImplicitGrant extends AbstractAuthorizationHandler implements Authorizatio
 
         $this->request = $request;
         $this->user = $user;
-        $this->client = $this->clientRepository->find($this->request->getClientId());
+
+        $client = $this->clientRepository->find($request->getClientId());
+        if ($client === null) {
+            throw (new ParameterException())->withMessages([
+                self::CLIENT_ID_KEY =>
+                    'The provided client_id cannot be used'
+            ]);
+        }
+        $this->client = $client;
 
         $accessToken = $this->generateAccessToken();
         $accessToken = $this->accessTokenRepository->write($accessToken);
