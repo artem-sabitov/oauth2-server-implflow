@@ -18,7 +18,7 @@ use Psr\Http\Message\UriInterface;
 use Zend\Diactoros\Response\RedirectResponse;
 use Zend\Diactoros\Uri;
 
-class ImplicitGrant extends AbstractAuthorizationHandler implements AuthorizationHandlerInterface
+class ImplicitGrant extends AbstractAuthorizationHandler
 {
     public const AUTHORIZATION_GRANT = 'token';
 

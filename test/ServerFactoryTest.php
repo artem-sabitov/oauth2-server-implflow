@@ -79,7 +79,7 @@ class ServerFactoryTest extends TestCase
         $this->container->has(AuthorizationHandlerInterface::class)->willReturn(false);
         $this->expectException(Exception\InvalidConfigException::class);
         $this->expectExceptionMessage(sprintf(
-            'Cannot register %s handler for response type \'%s\'',
+            '%s handler is missing for for grant type \'%s\'',
             $handler,
             $responseType
         ));

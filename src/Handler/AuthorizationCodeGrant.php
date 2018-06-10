@@ -8,18 +8,16 @@ use OAuth2\ClientInterface;
 use OAuth2\Exception\ParameterException;
 use OAuth2\Exception\RuntimeException;
 use OAuth2\IdentityInterface;
-use OAuth2\Provider\ClientProviderInterface;
 use OAuth2\Repository\AccessTokenRepositoryInterface;
 use OAuth2\Repository\AuthorizationCodeRepositoryInterface;
 use OAuth2\Repository\ClientRepositoryInterface;
 use OAuth2\Repository\RefreshTokenRepositoryInterface;
 use OAuth2\Request\AuthorizationRequest;
 use OAuth2\Token\AccessToken;
-use OAuth2\Token\TokenInterface;
 use OAuth2\Token\AuthorizationCode;
 use OAuth2\Token\RefreshToken;
 use OAuth2\Token\TokenBuilder;
-use OAuth2\TokenRepositoryInterface;
+use OAuth2\Token\TokenInterface;
 use OAuth2\UriBuilder;
 use OAuth2\Validator\AccessTokenRequestValidator;
 use OAuth2\Validator\AuthorizationCodeRequestValidator;
@@ -27,9 +25,8 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
 use Zend\Diactoros\Response\JsonResponse;
 use Zend\Diactoros\Response\RedirectResponse;
-use Zend\Diactoros\Uri;
 
-class AuthorizationCodeGrant extends AbstractAuthorizationHandler implements AuthorizationHandlerInterface
+class AuthorizationCodeGrant extends AbstractAuthorizationHandler
 {
     public const AUTHORIZATION_GRANT = 'code';
     public const AUTHORIZATION_CODE_KEY = 'code';

@@ -26,7 +26,7 @@ class Server implements ServerInterface
     /**
      * @var array
      */
-    protected $handlers = [];
+    protected $handlers;
 
     /**
      * @var callable
@@ -61,9 +61,6 @@ class Server implements ServerInterface
     }
 
     /**
-     * @param UserInterface $user
-     * @param ServerRequestInterface $request
-     * @return ResponseInterface
      * @throws Exception\RuntimeException
      */
     public function authorize(?UserInterface $user, ServerRequestInterface $request): ResponseInterface
@@ -74,7 +71,7 @@ class Server implements ServerInterface
 
         if (! $user instanceof IdentityInterface) {
             throw new Exception\RuntimeException(sprintf(
-                'User instance must implement the %s interface', IdentityInterface::class
+                'User must implement the %s interface', IdentityInterface::class
             ));
         }
 
@@ -110,7 +107,7 @@ class Server implements ServerInterface
      */
     public function getHandler(AuthorizationRequest $request): AuthorizationHandlerInterface
     {
-        if (count($this->handlers) === 0) {
+        if ($this->handlers === null) {
             throw new Exception\InvalidConfigException(
                 'No authorization handlers registered'
             );

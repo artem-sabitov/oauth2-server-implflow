@@ -43,7 +43,7 @@ class ServerFactory
         foreach ($handlers as $responseType => $handler) {
             if (! $container->has($handler)) {
                 throw new Exception\InvalidConfigException(sprintf(
-                    'Cannot register %s handler for response type \'%s\'',
+                    '%s handler is missing for for grant type \'%s\'',
                     $handler,
                     $responseType
                 ));

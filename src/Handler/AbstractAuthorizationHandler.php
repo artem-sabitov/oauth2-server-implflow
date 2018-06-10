@@ -4,12 +4,12 @@ namespace OAuth2\Handler;
 
 use OAuth2\IdentityInterface;
 use OAuth2\Provider\IdentityProviderInterface;
-use OAuth2\Repository\ClientRepositoryInterface;
 use OAuth2\Repository\AccessTokenRepositoryInterface;
+use OAuth2\Repository\ClientRepositoryInterface;
 use OAuth2\Request\AuthorizationRequest;
 use Psr\Http\Message\ResponseInterface;
 
-abstract class AbstractAuthorizationHandler
+abstract class AbstractAuthorizationHandler implements AuthorizationHandlerInterface
 {
     public const AUTHORIZATION_GRANT = '';
     public const REDIRECT_URI_KEY = 'redirect_uri';
