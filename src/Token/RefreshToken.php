@@ -18,6 +18,11 @@ class RefreshToken extends AbstractExpiresToken
     protected $accessToken;
 
     /**
+     * @var bool
+     */
+    protected $used;
+
+    /**
      * RefreshToken constructor.
      * @param string $refreshToken
      * @param AccessToken $accessToken
@@ -30,6 +35,7 @@ class RefreshToken extends AbstractExpiresToken
     ) {
         $this->refreshToken = $refreshToken;
         $this->accessToken = $accessToken;
+        $this->used = false;
         parent::__construct(
             $accessToken->getIdentity(),
             $accessToken->getClient(),
@@ -37,13 +43,25 @@ class RefreshToken extends AbstractExpiresToken
         );
     }
 
-    public function getValue(): string
+    public function getValue() : string
     {
         return $this->refreshToken;
     }
 
-    public function getAccessToken(): AccessToken
+    public function getAccessToken() : AccessToken
     {
         return $this->accessToken;
+    }
+
+    public function isUsed() : bool
+    {
+        return $this->used;
+    }
+
+    public function setUsed(bool $used) : RefreshToken
+    {
+        $this->used = $used;
+
+        return $this;
     }
 }

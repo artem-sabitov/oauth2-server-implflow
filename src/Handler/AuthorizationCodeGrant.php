@@ -21,6 +21,7 @@ use OAuth2\Token\TokenInterface;
 use OAuth2\UriBuilder;
 use OAuth2\Validator\AccessTokenRequestValidator;
 use OAuth2\Validator\AuthorizationCodeRequestValidator;
+use OAuth2\Validator\RefreshTokenRequestValidator;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
 use Zend\Diactoros\Response\JsonResponse;
@@ -29,11 +30,13 @@ use Zend\Diactoros\Response\RedirectResponse;
 class AuthorizationCodeGrant extends AbstractAuthorizationHandler
 {
     public const AUTHORIZATION_GRANT = 'code';
-    public const AUTHORIZATION_CODE_KEY = 'code';
     public const DEFAULT_TOKEN_TYPE = 'Bearer';
-    public const GRANT_TYPE_KEY = 'grant_type';
-    public const SUPPORTED_GRANT_TYPE = 'authorization_code';
     public const TOKEN_TYPE_KEY = 'token_type';
+    public const GRANT_TYPE_KEY = 'grant_type';
+    public const AUTHORIZATION_CODE = 'authorization_code';
+    public const AUTHORIZATION_CODE_KEY = 'code';
+    public const REFRESH_TOKEN = 'refresh_token';
+    public const REFRESH_TOKEN_KEY = 'refresh_token';
 
     private const REFRESH_TOKEN_HASH_ALG = 'SHA256';
 
@@ -79,13 +82,14 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
         parent::__construct($config, $clientRepository, $accessTokenRepository);
     }
 
-    public function canHandle(AuthorizationRequest $request): bool
+    public function canHandle(AuthorizationRequest $request) : bool
     {
         return $this->isRequestAuthorizationCode($request) ||
-            $this->isRequestAccessTokenByCode($request);
+            $this->isRequestAccessTokenByCode($request) ||
+            $this->isRequestRefreshToken($request);
     }
 
-    private function isRequestAuthorizationCode(AuthorizationRequest $request): bool
+    private function isRequestAuthorizationCode(AuthorizationRequest $request) : bool
     {
         if ($request->getMethod() !== 'GET') {
             return false;
@@ -94,16 +98,25 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
         return $request->get(self::RESPONSE_TYPE_KEY) === self::AUTHORIZATION_GRANT;
     }
 
-    private function isRequestAccessTokenByCode(AuthorizationRequest $request): bool
+    private function isRequestAccessTokenByCode(AuthorizationRequest $request) : bool
     {
         if ($request->getMethod() !== 'POST') {
             return false;
         }
 
-        return $request->get(self::GRANT_TYPE_KEY) === self::SUPPORTED_GRANT_TYPE;
+        return $request->get(self::GRANT_TYPE_KEY) === self::AUTHORIZATION_CODE;
     }
 
-    public function handle(IdentityInterface $user, AuthorizationRequest $request): ResponseInterface
+    private function isRequestRefreshToken(AuthorizationRequest $request) : bool
+    {
+        if ($request->getMethod() !== 'POST') {
+            return false;
+        }
+
+        return $request->get(self::GRANT_TYPE_KEY) === self::REFRESH_TOKEN;
+    }
+
+    public function handle(IdentityInterface $user, AuthorizationRequest $request) : ResponseInterface
     {
         $this->request = $request;
         $this->user = $user;
@@ -124,7 +137,7 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
                 throw ParameterException::create($messages);
             }
 
-            return $this->handlePartOne();
+            return $this->handleRequestAuthorizationCode();
         }
 
         if ($this->isRequestAccessTokenByCode($request)) {
@@ -143,7 +156,27 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
                 ]);
             }
 
-            return $this->handlePartTwo($authorizationCode);
+            return $this->handleRequestAccessTokenByCode($authorizationCode);
+        }
+
+        if ($this->isRequestRefreshToken($request)) {
+            $validator = $this->getRefreshTokenRequestValidator();
+            if ($validator->validate($request) === false) {
+                $messages = $validator->getErrorMessages();
+                throw ParameterException::create($messages);
+            }
+
+            $refreshToken = $this->refreshTokenRepository->find(
+                $request->get(self::REFRESH_TOKEN_KEY)
+            );
+            if ($refreshToken === null) {
+                throw (new ParameterException())->withMessages([
+                    self::REFRESH_TOKEN_KEY =>
+                        'The provided refresh token cannot be used'
+                ]);
+            }
+
+            return $this->handleRequestRefreshToken($refreshToken);
         }
 
         throw new RuntimeException(sprintf(
@@ -162,7 +195,12 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
         return new AccessTokenRequestValidator();
     }
 
-    protected function handlePartOne() : ResponseInterface
+    private function getRefreshTokenRequestValidator() : RefreshTokenRequestValidator
+    {
+        return new RefreshTokenRequestValidator();
+    }
+
+    protected function handleRequestAuthorizationCode() : ResponseInterface
     {
         $code = $this->generateAuthorizationCode();
         $code = $this->codeRepository->write($code);
@@ -172,7 +210,7 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
         );
     }
 
-    protected function handlePartTwo(AuthorizationCode $authorizationCode) : ResponseInterface
+    protected function handleRequestAccessTokenByCode(AuthorizationCode $authorizationCode) : ResponseInterface
     {
         $this->validateAuthorizationCode($authorizationCode);
 
@@ -196,10 +234,34 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
         return new JsonResponse($payload);
     }
 
+    protected function handleRequestRefreshToken(RefreshToken $refreshToken) : ResponseInterface
+    {
+        $this->validateRefreshToken($refreshToken);
+
+        $accessToken = $this->generateAccessToken();
+        $accessToken = $this->accessTokenRepository->write($accessToken);
+
+        $refreshToken = $this->generateRefreshToken($accessToken);
+        $refreshToken = $this->refreshTokenRepository->write($refreshToken);
+
+        $payload = [
+            self::ACCESS_TOKEN_KEY => $accessToken->getValue(),
+            self::REFRESH_TOKEN_KEY => $refreshToken->getValue(),
+            self::TOKEN_TYPE_KEY => self::DEFAULT_TOKEN_TYPE,
+            self::EXPIRES_IN_KEY => $accessToken->getExpires() - (new \DateTime())->getTimestamp(),
+            self::EXPIRES_ON_KEY => $accessToken->getExpires(),
+        ];
+
+        $refreshToken->setUsed(true);
+        $this->refreshTokenRepository->write($refreshToken);
+
+        return new JsonResponse($payload);
+    }
+
     /**
      * throws Exception\ParameterException
      */
-    private function validateAuthorizationCode(AuthorizationCode $code): void
+    private function validateAuthorizationCode(AuthorizationCode $code) : void
     {
         if ($code->isUsed()) {
             throw (new ParameterException())->withMessages([
@@ -217,15 +279,33 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
         }
     }
 
+    private function validateRefreshToken(RefreshToken $refreshToken) : void
+    {
+        if ($refreshToken->isUsed()) {
+            throw (new ParameterException())->withMessages([
+                self::REFRESH_TOKEN_KEY =>
+                    'The provided refresh token is already used'
+            ]);
+        }
+
+        $now = (new \DateTime())->getTimestamp();
+        if ($refreshToken->getExpires() <= $now) {
+            throw (new ParameterException())->withMessages([
+                self::REFRESH_TOKEN_KEY =>
+                    'The provided refresh token is expired'
+            ]);
+        }
+    }
+
     /**
      * @throws ParameterException
      */
-    protected function validate(AuthorizationRequest $request): void
+    protected function validate(AuthorizationRequest $request) : void
     {
         // TODO @artem_sabitov implements method!
     }
 
-    protected function generateAuthorizationCode(): AuthorizationCode
+    protected function generateAuthorizationCode() : AuthorizationCode
     {
         $tokenBuilder = new TokenBuilder();
 
@@ -241,7 +321,7 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
         return $authorizationCode;
     }
 
-    protected function generateAccessToken(): AccessToken
+    protected function generateAccessToken() : AccessToken
     {
         $tokenBuilder = new TokenBuilder();
 
@@ -257,7 +337,7 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
         return $accessToken;
     }
 
-    protected function generateRefreshToken(AccessToken $accessToken): RefreshToken
+    protected function generateRefreshToken(AccessToken $accessToken) : RefreshToken
     {
         $expires = $accessToken->getExpires() + $this->config['refresh_token_extra_time'];
         $expires = (new \DateTime())
@@ -273,7 +353,7 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
         return $refreshToken;
     }
 
-    protected function generateRedirectUri(AuthorizationCode $authorizationCode): UriInterface
+    protected function generateRedirectUri(AuthorizationCode $authorizationCode) : UriInterface
     {
         $requestedRedirectUri = '';
         if ($this->request instanceof AuthorizationRequest) {

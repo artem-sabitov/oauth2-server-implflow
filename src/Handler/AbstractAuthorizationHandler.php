@@ -18,7 +18,6 @@ abstract class AbstractAuthorizationHandler implements AuthorizationHandlerInter
     public const CLIENT_SECRET_KEY = 'client_secret';
     public const STATE_KEY = 'state';
     public const ACCESS_TOKEN_KEY = 'access_token';
-    public const REFRESH_TOKEN_KEY = 'refresh_token';
     public const EXPIRES_IN_KEY = 'expires_in';
     public const EXPIRES_ON_KEY = 'expires_on';
 

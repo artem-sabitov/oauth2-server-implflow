@@ -51,5 +51,4 @@ class AuthorizationCode extends AbstractExpiresToken
 
         return $this;
     }
-
 }

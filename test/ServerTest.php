@@ -96,11 +96,19 @@ class ServerTest extends TestCase
 
     public function registerAuthCodeGrantHandler(ServerInterface $server): ServerInterface
     {
+        /** @var IdentityInterface $identityMock */
+        $identityMock = $this->createMock(IdentityInterface::class);
+        /** @var ClientInterface $clientMock */
+        $clientMock = $this->createMock(ClientInterface::class);
+
         $accessTokenRepository = new TestAccessTokenRepository();
-        $refreshTokenRepository = new TestRefreshTokenRepository();
+        $refreshTokenRepository = new TestRefreshTokenRepository(
+            $identityMock,
+            $clientMock
+        );
         $codeRepository = new TestAuthorizationCodeRepository(
-            $this->createMock(IdentityInterface::class),
-            $this->createMock(ClientInterface::class)
+            $identityMock,
+            $clientMock
         );
 
         $handler = new AuthorizationCodeGrant(
@@ -523,6 +531,124 @@ class ServerTest extends TestCase
                 'client_id' => 'test',
                 'client_secret' => 'secret',
                 'redirect_uri' => 'http://example.com',
+            ]);
+
+        $server = $this->registerAuthCodeGrantHandler($this->getServer());
+        $response = $server->authorize($this->getUser(), $serverRequest);
+
+        $body = $response->getBody()->getContents();
+        $payload = Json::decode($body, Json::TYPE_ARRAY);
+
+        $this->assertInstanceOf(ResponseInterface::class, $response);
+        $this->assertNotEmpty($body);
+        $this->assertJson($body);
+        $this->assertArrayHasKey('access_token', $payload);
+        $this->assertNotEmpty($payload['access_token']);
+        $this->assertArrayHasKey('token_type', $payload);
+        $this->assertEquals($payload['token_type'], 'Bearer');
+        $this->assertArrayHasKey('expires_in', $payload);
+        $this->assertArrayHasKey('expires_on', $payload);
+        $this->assertArrayHasKey('refresh_token', $payload);
+        $this->assertNotEmpty($payload['refresh_token']);
+    }
+
+    public function testRequestWithoutRefreshTokenReturnError()
+    {
+        $serverRequest = (new Request())
+            ->withMethod('POST')
+            ->withHeader('Content-Type', 'application/json')
+            ->withParsedBody([
+                'grant_type' => 'refresh_token',
+                'client_id' => 'test',
+                'client_secret' => 'secret',
+            ]);
+
+        $server = $this->registerAuthCodeGrantHandler($this->getServer());
+        $response = $server->authorize($this->getUser(), $serverRequest);
+
+        $this->assertInstanceOf(Response\JsonResponse::class, $response);
+        $this->assertEquals(
+            '{"code":400,"errors":{"refresh_token":"Required parameter \u0027refresh_token\u0027 is missing"}}',
+            $response->getBody()->getContents()
+        );
+    }
+
+    public function testRequestWithEmptyRefreshTokenReturnError()
+    {
+        $serverRequest = (new Request())
+            ->withMethod('POST')
+            ->withHeader('Content-Type', 'application/json')
+            ->withParsedBody([
+                'grant_type' => 'refresh_token',
+                'refresh_token' => '',
+                'client_id' => 'test',
+                'client_secret' => 'secret',
+            ]);
+
+        $server = $this->registerAuthCodeGrantHandler($this->getServer());
+        $response = $server->authorize($this->getUser(), $serverRequest);
+
+        $this->assertInstanceOf(Response\JsonResponse::class, $response);
+        $this->assertEquals(
+            '{"code":400,"errors":{"refresh_token":"The provided refresh token cannot be used"}}',
+            $response->getBody()->getContents()
+        );
+    }
+
+    public function testRequestWithExpiredRefreshTokenReturnError()
+    {
+        $serverRequest = (new Request())
+            ->withMethod('POST')
+            ->withHeader('Content-Type', 'application/json')
+            ->withParsedBody([
+                'grant_type' => 'refresh_token',
+                'refresh_token' => 'expired',
+                'client_id' => 'test',
+                'client_secret' => 'secret',
+            ]);
+
+        $server = $this->registerAuthCodeGrantHandler($this->getServer());
+        $response = $server->authorize($this->getUser(), $serverRequest);
+
+        $this->assertInstanceOf(Response\JsonResponse::class, $response);
+        $this->assertEquals(
+            '{"code":400,"errors":{"refresh_token":"The provided refresh token is expired"}}',
+            $response->getBody()->getContents()
+        );
+    }
+
+    public function testRequestWithUsedRefreshTokenReturnError()
+    {
+        $serverRequest = (new Request())
+            ->withMethod('POST')
+            ->withHeader('Content-Type', 'application/json')
+            ->withParsedBody([
+                'grant_type' => 'refresh_token',
+                'refresh_token' => 'used',
+                'client_id' => 'test',
+                'client_secret' => 'secret',
+            ]);
+
+        $server = $this->registerAuthCodeGrantHandler($this->getServer());
+        $response = $server->authorize($this->getUser(), $serverRequest);
+
+        $this->assertInstanceOf(Response\JsonResponse::class, $response);
+        $this->assertEquals(
+            '{"code":400,"errors":{"refresh_token":"The provided refresh token is already used"}}',
+            $response->getBody()->getContents()
+        );
+    }
+
+    public function testRequestWithCorrectRefreshTokenReturnAccessToken()
+    {
+        $serverRequest = (new Request())
+            ->withMethod('POST')
+            ->withHeader('Content-Type', 'application/json')
+            ->withParsedBody([
+                'grant_type' => 'refresh_token',
+                'refresh_token' => 'test',
+                'client_id' => 'test',
+                'client_secret' => 'secret',
             ]);
 
         $server = $this->registerAuthCodeGrantHandler($this->getServer());
