@@ -254,16 +254,18 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
         );
         $accessToken = $this->accessTokenRepository->write($accessToken);
 
-        $refreshToken = $this->generateRefreshToken($accessToken);
-        $refreshToken = $this->refreshTokenRepository->write($refreshToken);
+        $newRefreshToken = $this->generateRefreshToken($accessToken);
+        $newRefreshToken = $this->refreshTokenRepository->write($newRefreshToken);
 
         $payload = [
             self::ACCESS_TOKEN_KEY => $accessToken->getValue(),
-            self::REFRESH_TOKEN_KEY => $refreshToken->getValue(),
+            self::REFRESH_TOKEN_KEY => $newRefreshToken->getValue(),
             self::TOKEN_TYPE_KEY => self::DEFAULT_TOKEN_TYPE,
             self::EXPIRES_IN_KEY => $accessToken->getExpires() - (new \DateTime())->getTimestamp(),
             self::EXPIRES_ON_KEY => $accessToken->getExpires(),
         ];
+
+        $this->refreshTokenRepository->write($newRefreshToken);
 
         $refreshToken->setUsed(true);
         $this->refreshTokenRepository->write($refreshToken);
