@@ -11,15 +11,16 @@ use OAuth2\Repository\AccessTokenRepositoryInterface;
 use OAuth2\Repository\AuthorizationCodeRepositoryInterface;
 use OAuth2\Repository\RefreshTokenRepositoryInterface;
 use Psr\Container\ContainerInterface;
+use Zend\Expressive\Authentication\AuthenticationInterface;
 
 class AuthorizationCodeHandlerFactory
 {
     public function __invoke(ContainerInterface $container)
     {
-        $config = $container->get('config')['oauth2']['authorization_code_flow'] ?? null;
+        $config = $container->get('config')['oauth2']['authorization_code_grant'] ?? null;
         if (null === $config) {
             throw new Exception\InvalidConfigException(sprintf(
-                'Cannot create %s handler; config oauth2.authorization_code_flow is missing',
+                'Cannot create %s handler; config oauth2.authorization_code_grant is missing',
                 AuthorizationCodeGrant::class
             ));
         }

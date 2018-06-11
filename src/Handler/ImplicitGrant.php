@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace OAuth2\Handler;
 
 use OAuth2\ClientInterface;
-use OAuth2\Exception\ParameterException;
+use OAuth2\Exception;
 use OAuth2\IdentityInterface;
 use OAuth2\Request\AuthorizationRequest;
 use OAuth2\Token\AccessToken;
-use OAuth2\Token\TokenInterface;
 use OAuth2\Token\TokenBuilder;
+use OAuth2\Token\TokenInterface;
 use OAuth2\UriBuilder;
 use OAuth2\Validator\AuthorizationRequestValidator;
 use Psr\Http\Message\ResponseInterface;
@@ -52,25 +52,27 @@ class ImplicitGrant extends AbstractAuthorizationHandler
      */
     protected $responseFactory;
 
-    public function handle(IdentityInterface $user, AuthorizationRequest $request): ResponseInterface
+    public function handle(?IdentityInterface $user, AuthorizationRequest $request): ResponseInterface
     {
+        $this->request = $request;
+
         $validator = $this->getAuthorizationRequestValidator();
         if ($validator->validate($request) === false) {
             $messages = $validator->getErrorMessages();
-            throw ParameterException::create($messages);
+            throw Exception\ParameterException::create($messages);
         }
 
-        $this->request = $request;
+        if (! $user instanceof IdentityInterface) {
+            return new RedirectResponse($this->getAuthenticationUri());
+        }
         $this->user = $user;
 
-        $client = $this->clientRepository->find($request->getClientId());
-        if ($client === null) {
-            throw (new ParameterException())->withMessages([
-                self::CLIENT_ID_KEY =>
-                    'The provided client_id cannot be used'
+        $this->client = $this->clientRepository->find($request->getClientId());
+        if ($this->client === null) {
+            throw (new Exception\ParameterException())->withMessages([
+                self::CLIENT_ID_KEY => 'The provided client_id cannot be used'
             ]);
         }
-        $this->client = $client;
 
         $accessToken = $this->generateAccessToken();
         $accessToken = $this->accessTokenRepository->write($accessToken);
@@ -106,21 +108,11 @@ class ImplicitGrant extends AbstractAuthorizationHandler
 
     protected function generateRedirectUri(AccessToken $accessToken): UriInterface
     {
-        $requestedRedirectUri = '';
-        if ($this->request instanceof AuthorizationRequest) {
-            $requestedRedirectUri = $this->request->get(self::REDIRECT_URI_KEY);
-        }
-
-        $query = http_build_query([
-            self::ACCESS_TOKEN_KEY => $accessToken->getValue(),
-            self::EXPIRES_IN_KEY => $this->config['expiration_time'],
-            self::EXPIRES_ON_KEY => $accessToken->getExpires(),
-        ]);
-
+        $requestedRedirectUri = $this->request->get(self::REDIRECT_URI_KEY);
         $redirectUri = $accessToken->getClient()->getRedirectUri();
 
         if (strpos($requestedRedirectUri, $redirectUri) === false) {
-            throw (new ParameterException())->withMessages([
+            throw (new Exception\ParameterException())->withMessages([
                 self::REDIRECT_URI_KEY => sprintf(
                     "Uri %s can not register for client %s",
                     $requestedRedirectUri,
@@ -129,11 +121,21 @@ class ImplicitGrant extends AbstractAuthorizationHandler
             ]);
         }
 
-        $uri = (new UriBuilder())
-            ->setAllowedSchemes($this->config['allowed_schemes'])
-            ->build($redirectUri);
+        $query = http_build_query([
+            self::ACCESS_TOKEN_KEY => $accessToken->getValue(),
+            self::EXPIRES_IN_KEY => $this->config['expiration_time'],
+            self::EXPIRES_ON_KEY => $accessToken->getExpires(),
+        ]);
 
-        return $uri->withQuery($query);
+        return (new UriBuilder())
+            ->setAllowedSchemes($this->config['allowed_schemes'])
+            ->build($redirectUri)
+            ->withQuery($query);
+    }
+
+    protected function getAuthenticationUri() : Uri
+    {
+        return new Uri($this->config['authentication_uri']);
     }
 
     public function getAuthorizationRequestValidator(): AuthorizationRequestValidator

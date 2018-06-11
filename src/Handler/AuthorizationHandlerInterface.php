@@ -10,5 +10,5 @@ interface AuthorizationHandlerInterface
 {
     public function canHandle(AuthorizationRequest $request): bool;
 
-    public function handle(IdentityInterface $user, AuthorizationRequest $request): ResponseInterface;
+    public function handle(?IdentityInterface $user, AuthorizationRequest $request): ResponseInterface;
 }

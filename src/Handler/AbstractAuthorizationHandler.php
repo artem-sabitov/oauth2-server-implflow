@@ -58,5 +58,5 @@ abstract class AbstractAuthorizationHandler implements AuthorizationHandlerInter
 
     abstract public function canHandle(AuthorizationRequest $request): bool;
 
-    abstract public function handle(IdentityInterface $user, AuthorizationRequest $request): ResponseInterface;
+    abstract public function handle(?IdentityInterface $user, AuthorizationRequest $request): ResponseInterface;
 }

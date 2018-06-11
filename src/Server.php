@@ -63,18 +63,8 @@ class Server implements ServerInterface
     /**
      * @throws Exception\RuntimeException
      */
-    public function authorize(?UserInterface $user, ServerRequestInterface $request): ResponseInterface
+    public function authorize(?IdentityInterface $user, ServerRequestInterface $request): ResponseInterface
     {
-        if (! $this->isAuthenticated($user)) {
-            return new Response\RedirectResponse($this->getAuthenticationUri());
-        }
-
-        if (! $user instanceof IdentityInterface) {
-            throw new Exception\RuntimeException(sprintf(
-                'User must implement the %s interface', IdentityInterface::class
-            ));
-        }
-
         $authorizationRequest = $this->createAuthorizationRequest($request);
 
         try {

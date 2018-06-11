@@ -14,10 +14,10 @@ class ImplicitHandlerFactory
 {
     public function __invoke(ContainerInterface $container)
     {
-        $config = $container->get('config')['oauth2']['implicit_flow'] ?? null;
+        $config = $container->get('config')['oauth2']['implicit_grant'] ?? null;
         if (null === $config) {
             throw new Exception\InvalidConfigException(sprintf(
-                'Cannot create %s handler; config oauth2.implicit_flow is missing',
+                'Cannot create %s handler; config oauth2.implicit_grant is missing',
                 ImplicitGrant::class
             ));
         }

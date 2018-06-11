@@ -26,6 +26,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
 use Zend\Diactoros\Response\JsonResponse;
 use Zend\Diactoros\Response\RedirectResponse;
+use Zend\Diactoros\Uri;
 
 class AuthorizationCodeGrant extends AbstractAuthorizationHandler
 {
@@ -82,6 +83,11 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
         parent::__construct($config, $clientRepository, $accessTokenRepository);
     }
 
+    protected function getAuthenticationUri() : Uri
+    {
+        return new Uri($this->config['authentication_uri']);
+    }
+
     public function canHandle(AuthorizationRequest $request) : bool
     {
         return $this->isRequestAuthorizationCode($request) ||
@@ -116,21 +122,24 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
         return $request->get(self::GRANT_TYPE_KEY) === self::REFRESH_TOKEN;
     }
 
-    public function handle(IdentityInterface $user, AuthorizationRequest $request) : ResponseInterface
+    public function handle(?IdentityInterface $user, AuthorizationRequest $request) : ResponseInterface
     {
         $this->request = $request;
-        $this->user = $user;
 
-        $client = $this->clientRepository->find($request->getClientId());
-        if ($client === null) {
+        $this->client = $this->clientRepository->find($request->getClientId());
+        if ($this->client === null) {
             throw (new ParameterException())->withMessages([
                 self::CLIENT_ID_KEY =>
                     'The provided client_id cannot be used'
             ]);
         }
-        $this->client = $client;
 
         if ($this->isRequestAuthorizationCode($request)) {
+            if (! $user instanceof IdentityInterface) {
+                return new RedirectResponse($this->getAuthenticationUri());
+            }
+            $this->user = $user;
+
             $validator = $this->getAuthorizationCodeRequestValidator();
             if ($validator->validate($request) === false) {
                 $messages = $validator->getErrorMessages();
@@ -202,7 +211,7 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
 
     protected function handleRequestAuthorizationCode() : ResponseInterface
     {
-        $code = $this->generateAuthorizationCode();
+        $code = $this->generateAuthorizationCode($this->user, $this->client);
         $code = $this->codeRepository->write($code);
 
         return new RedirectResponse(
@@ -214,11 +223,13 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
     {
         $this->validateAuthorizationCode($authorizationCode);
 
-        $accessToken = $this->generateAccessToken();
-        $accessToken = $this->accessTokenRepository->write($accessToken);
+        $accessToken = $this->generateAccessToken(
+            $authorizationCode->getIdentity(), $this->client
+        );
+        $this->accessTokenRepository->write($accessToken);
 
         $refreshToken = $this->generateRefreshToken($accessToken);
-        $refreshToken = $this->refreshTokenRepository->write($refreshToken);
+        $this->refreshTokenRepository->write($refreshToken);
 
         $payload = [
             self::ACCESS_TOKEN_KEY => $accessToken->getValue(),
@@ -238,7 +249,9 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
     {
         $this->validateRefreshToken($refreshToken);
 
-        $accessToken = $this->generateAccessToken();
+        $accessToken = $this->generateAccessToken(
+            $refreshToken->getIdentity(), $this->client
+        );
         $accessToken = $this->accessTokenRepository->write($accessToken);
 
         $refreshToken = $this->generateRefreshToken($accessToken);
@@ -305,15 +318,15 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
         // TODO @artem_sabitov implements method!
     }
 
-    protected function generateAuthorizationCode() : AuthorizationCode
+    protected function generateAuthorizationCode(IdentityInterface $user, ClientInterface $client) : AuthorizationCode
     {
         $tokenBuilder = new TokenBuilder();
 
         /** @var AuthorizationCode $authorizationCode */
         $authorizationCode = $tokenBuilder
             ->setTokenClass(AuthorizationCode::class)
-            ->setIdentity($this->user)
-            ->setClient($this->client)
+            ->setIdentity($user)
+            ->setClient($client)
             ->setExpirationTime($this->config['expiration_time'])
             ->setIssuerIdentifier($this->config['issuer_identifier'])
             ->generate();
@@ -321,15 +334,15 @@ class AuthorizationCodeGrant extends AbstractAuthorizationHandler
         return $authorizationCode;
     }
 
-    protected function generateAccessToken() : AccessToken
+    protected function generateAccessToken(IdentityInterface $user, ClientInterface $client) : AccessToken
     {
         $tokenBuilder = new TokenBuilder();
 
         /** @var AccessToken $accessToken */
         $accessToken = $tokenBuilder
             ->setTokenClass(AccessToken::class)
-            ->setIdentity($this->user)
-            ->setClient($this->client)
+            ->setIdentity($user)
+            ->setClient($client)
             ->setExpirationTime($this->config['expiration_time'])
             ->setIssuerIdentifier($this->config['issuer_identifier'])
             ->generate();

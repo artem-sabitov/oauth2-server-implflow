@@ -2,7 +2,9 @@
 
 namespace OAuth2;
 
-interface IdentityInterface
+use Zend\Expressive\Authentication\UserInterface;
+
+interface IdentityInterface extends UserInterface
 {
     /**
      * @return mixed

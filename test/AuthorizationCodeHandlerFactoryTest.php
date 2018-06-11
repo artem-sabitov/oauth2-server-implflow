@@ -69,7 +69,7 @@ class AuthorizationCodeHandlerFactoryTest extends TestCase
         $this->container->get('config')->willReturn([]);
         $this->expectException(Exception\InvalidConfigException::class);
         $this->expectExceptionMessage(sprintf(
-            'Cannot create %s handler; config oauth2.authorization_code_flow is missing',
+            'Cannot create %s handler; config oauth2.authorization_code_grant is missing',
             $handler
         ));
         ($this->factory)($this->container->reveal());
@@ -81,7 +81,7 @@ class AuthorizationCodeHandlerFactoryTest extends TestCase
         $this->container->get('config')->willReturn(['oauth2' => []]);
         $this->expectException(Exception\InvalidConfigException::class);
         $this->expectExceptionMessage(sprintf(
-            'Cannot create %s handler; config oauth2.authorization_code_flow is missing',
+            'Cannot create %s handler; config oauth2.authorization_code_grant is missing',
             $handler
         ));
         ($this->factory)($this->container->reveal());
@@ -94,7 +94,7 @@ class AuthorizationCodeHandlerFactoryTest extends TestCase
 
         $this->container->get('config')->willReturn([
             'oauth2' => [
-                'authorization_code_flow' => [],
+                'authorization_code_grant' => [],
             ],
         ]);
         $this->container->has($dependency)->willReturn(false);
@@ -111,7 +111,7 @@ class AuthorizationCodeHandlerFactoryTest extends TestCase
     {
         $this->container->get('config')->willReturn([
             'oauth2' => [
-                'authorization_code_flow' => [],
+                'authorization_code_grant' => [],
             ],
         ]);
         $this->runTestWithoutDependency(
@@ -123,7 +123,7 @@ class AuthorizationCodeHandlerFactoryTest extends TestCase
     {
         $this->container->get('config')->willReturn([
             'oauth2' => [
-                'authorization_code_flow' => [],
+                'authorization_code_grant' => [],
             ],
         ]);
         $this->runTestWithoutDependency(
@@ -135,7 +135,7 @@ class AuthorizationCodeHandlerFactoryTest extends TestCase
     {
         $this->container->get('config')->willReturn([
             'oauth2' => [
-                'authorization_code_flow' => [],
+                'authorization_code_grant' => [],
             ],
         ]);
         $this->runTestWithoutDependency(
@@ -159,7 +159,7 @@ class AuthorizationCodeHandlerFactoryTest extends TestCase
     {
         $this->container->get('config')->willReturn([
             'oauth2' => [
-                'authorization_code_flow' => [],
+                'authorization_code_grant' => [],
             ],
         ]);
         $server = ($this->factory)($this->container->reveal());

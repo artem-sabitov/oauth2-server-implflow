@@ -24,16 +24,10 @@ class ConfigProvider
     public function getOAuth2Config() : array
     {
         return [
-            'authentication_uri' => '',
             'authorization_handlers' => [],
-            'implicit_flow' => [
-                'expiration_time' => 60 * 60 * 6, // 6 hours
-                'issuer_identifier' => '',
-                'allowed_schemes' => [
-                    'https' => 443,
-                ],
-            ],
-            'authorization_code_flow' => [
+            /*
+            'authorization_code_grant' => [
+                'authentication_uri' => '',
                 'expiration_time' => 60 * 60 * 6, // 6 hours
                 'issuer_identifier' => '',
                 'refresh_token_extra_time' => 60 * 60 * 720, // 30 days
@@ -41,6 +35,15 @@ class ConfigProvider
                     'https' => 443,
                 ],
             ],
+            'implicit_grant' => [
+                'authentication_uri' => '',
+                'expiration_time' => 60 * 60 * 6, // 6 hours
+                'issuer_identifier' => '',
+                'allowed_schemes' => [
+                    'https' => 443,
+                ],
+            ],
+             */
         ];
     }
 

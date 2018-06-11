@@ -12,7 +12,7 @@ interface ServerInterface
 {
     public function registerHandler(string $responseType, AuthorizationHandlerInterface $handler): ServerInterface;
 
-    public function authorize(UserInterface $user, ServerRequestInterface $request): ResponseInterface;
+    public function authorize(IdentityInterface $user, ServerRequestInterface $request): ResponseInterface;
 
     public function createAuthorizationRequest(ServerRequestInterface $request): AuthorizationRequest;
 }

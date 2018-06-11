@@ -10,11 +10,8 @@ use OAuth2\Exception\InvalidConfigException;
 use OAuth2\Handler\AuthorizationCodeGrant;
 use OAuth2\Handler\ImplicitGrant;
 use OAuth2\IdentityInterface;
-use OAuth2\Repository\AccessTokenRepositoryInterface;
 use OAuth2\Repository\ClientRepositoryInterface;
-use OAuth2\Repository\RefreshTokenRepositoryInterface;
 use OAuth2\Request\AuthorizationRequest;
-use OAuth2\Provider\IdentityProviderInterface;
 use OAuth2\Server;
 use OAuth2\ServerInterface;
 use OAuth2\UriBuilder;
@@ -22,14 +19,12 @@ use OAuth2Test\Assets\TestAccessTokenRepository;
 use OAuth2Test\Assets\TestAuthorizationCodeRepository;
 use OAuth2Test\Assets\TestClientRepository;
 use OAuth2Test\Assets\TestRefreshTokenRepository;
-use OAuth2Test\Assets\TestSuccessIdentityProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Zend\Diactoros\Response;
 use Zend\Diactoros\ServerRequest as Request;
 use Zend\Diactoros\Uri;
-use Zend\Expressive\Authentication\UserInterface;
 use Zend\Json\Json;
 
 class ServerTest extends TestCase
@@ -43,11 +38,6 @@ class ServerTest extends TestCase
      * @var callable
      */
     protected $responseFactory;
-
-    /**
-     * @var IdentityProviderInterface
-     */
-    private $identityProvider;
 
     /**
      * @var ClientRepositoryInterface
@@ -80,6 +70,7 @@ class ServerTest extends TestCase
         $tokenRepository = new TestAccessTokenRepository();
         $handler = new ImplicitGrant(
             [
+                'authentication_uri' => 'http://example.com/login',
                 'expiration_time' => 60 * 60,
                 'issuer_identifier' => 'test_server',
                 'allowed_schemes' => [
@@ -131,9 +122,9 @@ class ServerTest extends TestCase
         return $server->registerHandler('code', $handler);
     }
 
-    public function getUser(): UserInterface
+    public function getUser(): IdentityInterface
     {
-        return new class implements UserInterface, IdentityInterface
+        return new class implements IdentityInterface
         {
             public function getIdentity(): string { return $this->getIdentityId(); }
 
@@ -564,7 +555,7 @@ class ServerTest extends TestCase
             ]);
 
         $server = $this->registerAuthCodeGrantHandler($this->getServer());
-        $response = $server->authorize($this->getUser(), $serverRequest);
+        $response = $server->authorize(null, $serverRequest);
 
         $this->assertInstanceOf(Response\JsonResponse::class, $response);
         $this->assertEquals(
@@ -586,7 +577,7 @@ class ServerTest extends TestCase
             ]);
 
         $server = $this->registerAuthCodeGrantHandler($this->getServer());
-        $response = $server->authorize($this->getUser(), $serverRequest);
+        $response = $server->authorize(null, $serverRequest);
 
         $this->assertInstanceOf(Response\JsonResponse::class, $response);
         $this->assertEquals(
@@ -608,7 +599,7 @@ class ServerTest extends TestCase
             ]);
 
         $server = $this->registerAuthCodeGrantHandler($this->getServer());
-        $response = $server->authorize($this->getUser(), $serverRequest);
+        $response = $server->authorize(null, $serverRequest);
 
         $this->assertInstanceOf(Response\JsonResponse::class, $response);
         $this->assertEquals(
@@ -630,7 +621,7 @@ class ServerTest extends TestCase
             ]);
 
         $server = $this->registerAuthCodeGrantHandler($this->getServer());
-        $response = $server->authorize($this->getUser(), $serverRequest);
+        $response = $server->authorize(null, $serverRequest);
 
         $this->assertInstanceOf(Response\JsonResponse::class, $response);
         $this->assertEquals(
@@ -652,7 +643,7 @@ class ServerTest extends TestCase
             ]);
 
         $server = $this->registerAuthCodeGrantHandler($this->getServer());
-        $response = $server->authorize($this->getUser(), $serverRequest);
+        $response = $server->authorize(null, $serverRequest);
 
         $body = $response->getBody()->getContents();
         $payload = Json::decode($body, Json::TYPE_ARRAY);

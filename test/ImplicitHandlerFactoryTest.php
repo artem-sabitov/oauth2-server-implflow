@@ -50,7 +50,7 @@ class ImplicitHandlerFactoryTest extends TestCase
     {
         $this->container->get('config')->willReturn([]);
         $this->expectException(Exception\InvalidConfigException::class);
-        $this->expectExceptionMessage('Cannot create OAuth2\Handler\ImplicitGrant handler; config oauth2.implicit_flow is missing');
+        $this->expectExceptionMessage('Cannot create OAuth2\Handler\ImplicitGrant handler; config oauth2.implicit_grant is missing');
         ($this->factory)($this->container->reveal());
     }
 
@@ -58,7 +58,7 @@ class ImplicitHandlerFactoryTest extends TestCase
     {
         $this->container->get('config')->willReturn(['oauth2' => []]);
         $this->expectException(Exception\InvalidConfigException::class);
-        $this->expectExceptionMessage('Cannot create OAuth2\Handler\ImplicitGrant handler; config oauth2.implicit_flow is missing');
+        $this->expectExceptionMessage('Cannot create OAuth2\Handler\ImplicitGrant handler; config oauth2.implicit_grant is missing');
         ($this->factory)($this->container->reveal());
     }
 
@@ -69,7 +69,7 @@ class ImplicitHandlerFactoryTest extends TestCase
 
         $this->container->get('config')->willReturn([
             'oauth2' => [
-                'implicit_flow' => [],
+                'implicit_grant' => [],
             ],
         ]);
         $this->container->has($dependency)->willReturn(false);
@@ -89,7 +89,7 @@ class ImplicitHandlerFactoryTest extends TestCase
 
         $this->container->get('config')->willReturn([
             'oauth2' => [
-                'implicit_flow' => [],
+                'implicit_grant' => [],
             ],
         ]);
         $this->container->has($dependency)->willReturn(false);
@@ -106,7 +106,7 @@ class ImplicitHandlerFactoryTest extends TestCase
     {
         $this->container->get('config')->willReturn([
             'oauth2' => [
-                'implicit_flow' => [],
+                'implicit_grant' => [],
             ],
         ]);
         $server = ($this->factory)($this->container->reveal());
